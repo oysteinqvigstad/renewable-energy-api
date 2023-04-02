@@ -37,6 +37,18 @@ func (client *Client) Prod() (string, error) {
 	return status, err
 }
 
+// Parses base url and adds path components
+func (client *Client) SetURL(base string, path ...string) error {
+	newBase, e := client.URL.Parse(base)
+	if e != nil {
+		return e
+	}
+
+	client.URL = newBase.JoinPath(path...)
+
+	return nil
+}
+
 // Set path component of URL
 func (client *Client) SetPath(value ...string) {
 	client.URL = client.URL.JoinPath(value...)
