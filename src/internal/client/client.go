@@ -34,8 +34,8 @@ func (client *Client) Prod() (string, error) {
 	return status, err
 }
 
-func (client *Client) SetPath(value string) {
-	client.URL = client.URL.JoinPath(value)
+func (client *Client) SetPath(value ...string) {
+	client.URL = client.URL.JoinPath(value...)
 }
 
 func (client *Client) AddQuery(key string, value string) {
