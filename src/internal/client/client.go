@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -67,9 +68,10 @@ func (client *Client) ClearQuery() {
 	}
 }
 
-func (client *Client) Get() (*http.Response, error) {
+// Instantiates a request, http client, and performs request.
+func (client *Client) Do(method string, reader io.Reader) (*http.Response, error) {
 	// make request
-	r, e := http.NewRequest(http.MethodGet, client.URL.String(), nil)
+	r, e := http.NewRequest(method, client.URL.String(), reader)
 	if e != nil {
 		return nil, e
 	}
@@ -78,10 +80,15 @@ func (client *Client) Get() (*http.Response, error) {
 	c := &http.Client{}
 	defer c.CloseIdleConnections()
 
-	fmt.Println("Performing query: ", r.URL.String())
+	fmt.Printf("Performing %v request on URL: %v\n", method, r.URL.String())
 
 	// issue request
 	res, err := c.Do(r)
+	return res, err
+}
+
+func (client *Client) Get() (*http.Response, error) {
+	res, err := client.Do(http.MethodGet, nil)
 	return res, err
 }
 
