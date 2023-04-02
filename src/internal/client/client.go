@@ -9,7 +9,7 @@ import (
 )
 
 type Client struct {
-	URL *url.URL
+	URL *url.URL // url to perform requests on.
 }
 
 // Construct a new instance of Client.
