@@ -7,22 +7,22 @@ import (
 	"net/http"
 )
 
-type RestClient struct {
+type Client struct {
 	request *http.Request
 }
 
-func NewRestClient(url string) RestClient {
+func NewClient(url string) Client {
 	r, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		log.Fatal("Error in request:", err.Error())
 	}
 
-	return RestClient{r}
+	return Client{r}
 }
 
 // Sends request and returns status code
 // Request should be easy for external to handle
-func (client *RestClient) Prod() (string, error) {
+func (client *Client) Prod() (string, error) {
 	status := ""
 
 	res, err := client.Get()
@@ -34,11 +34,11 @@ func (client *RestClient) Prod() (string, error) {
 	return status, err
 }
 
-func (client *RestClient) SetPath(value string) {
+func (client *Client) SetPath(value string) {
 	client.request.URL = client.request.URL.JoinPath(value)
 }
 
-func (client *RestClient) AddQuery(key string, value string) {
+func (client *Client) AddQuery(key string, value string) {
 	query := client.request.URL.Query()
 	vals := query[key]
 
@@ -54,20 +54,20 @@ func (client *RestClient) AddQuery(key string, value string) {
 	}
 }
 
-func (client *RestClient) SetQuery(key string, value string) {
+func (client *Client) SetQuery(key string, value string) {
 	query := client.request.URL.Query()
 	query.Set(key, value)
 	client.request.URL.RawQuery = query.Encode()
 }
 
-func (client *RestClient) ClearQuery() {
+func (client *Client) ClearQuery() {
 	query := client.request.URL.Query()
 	for k := range query {
 		delete(query, k)
 	}
 }
 
-func (client *RestClient) Get() (*http.Response, error) {
+func (client *Client) Get() (*http.Response, error) {
 	// instantiate client
 	c := &http.Client{}
 	defer c.CloseIdleConnections()
@@ -79,7 +79,7 @@ func (client *RestClient) Get() (*http.Response, error) {
 	return res, err
 }
 
-func (client *RestClient) GetContent(output any) error {
+func (client *Client) GetContent(output any) error {
 	// issue request
 	res, err := client.Get()
 	if err != nil {
