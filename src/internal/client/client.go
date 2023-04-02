@@ -12,6 +12,7 @@ type Client struct {
 	URL *url.URL
 }
 
+// Construct a new instance of Client.
 func NewClient(rawURL string) (*Client, error) {
 	URL, e := url.Parse(rawURL)
 	if e != nil {
@@ -21,8 +22,9 @@ func NewClient(rawURL string) (*Client, error) {
 	return &Client{URL}, nil
 }
 
-// Sends request and returns status code
-// Request should be easy for external to handle
+// Sends request and returns status code.
+// User should make sure to send a request that is
+// easy for the server to handle.
 func (client *Client) Prod() (string, error) {
 	status := ""
 
@@ -35,10 +37,13 @@ func (client *Client) Prod() (string, error) {
 	return status, err
 }
 
+// Set path component of URL
 func (client *Client) SetPath(value ...string) {
 	client.URL = client.URL.JoinPath(value...)
 }
 
+// Add a key/value pair to the query.
+// Duplicate values are discarded.
 func (client *Client) AddQuery(key string, value string) {
 	query := client.URL.Query()
 	vals := query[key]
@@ -55,12 +60,14 @@ func (client *Client) AddQuery(key string, value string) {
 	}
 }
 
+// Set key/value pair for query, replacing any existing values.
 func (client *Client) SetQuery(key string, value string) {
 	query := client.URL.Query()
 	query.Set(key, value)
 	client.URL.RawQuery = query.Encode()
 }
 
+// Clear all queries from URL.
 func (client *Client) ClearQuery() {
 	query := client.URL.Query()
 	for k := range query {
@@ -87,10 +94,14 @@ func (client *Client) Do(method string, reader io.Reader) (*http.Response, error
 	return res, err
 }
 
+// Wrapper method for Do.
+// Performs a GET request with no body.
 func (client *Client) Get() (*http.Response, error) {
 	return client.Do(http.MethodGet, nil)
 }
 
+// Wrapper method for Do.
+// Performs a POST request with provided body.
 func (client *Client) Post(body io.Reader) (*http.Response, error) {
 	if body == nil {
 		return nil, fmt.Errorf("client: body cannot be nil when performing POST request")
@@ -99,6 +110,7 @@ func (client *Client) Post(body io.Reader) (*http.Response, error) {
 	return client.Do(http.MethodPost, body)
 }
 
+// Perform a get request and decode response body to the provided struct.
 func (client *Client) GetAndDecode(output any) error {
 	// issue request
 	res, err := client.Get()
