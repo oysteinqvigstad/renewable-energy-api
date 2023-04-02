@@ -40,8 +40,18 @@ func (client *RestClient) SetPath(value string) {
 
 func (client *RestClient) AddQuery(key string, value string) {
 	query := client.request.URL.Query()
-	query.Add(key, value)
-	client.request.URL.RawQuery = query.Encode()
+	vals := query[key]
+
+	//check if duplicate key/value pair
+	duplicate := false
+	for i := range vals {
+		duplicate = duplicate || vals[i] == value
+	}
+
+	if !duplicate {
+		query.Add(key, value)
+		client.request.URL.RawQuery = query.Encode()
+	}
 }
 
 func (client *RestClient) SetQuery(key string, value string) {
