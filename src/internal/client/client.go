@@ -3,21 +3,21 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"net/url"
 )
 
 type Client struct {
-	request *http.Request
+	URL *url.URL
 }
 
-func NewClient(url string) Client {
-	r, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		log.Fatal("Error in request:", err.Error())
+func NewClient(rawURL string) (*Client, error) {
+	URL, e := url.Parse(rawURL)
+	if e != nil {
+		return nil, e
 	}
 
-	return Client{r}
+	return &Client{URL}, nil
 }
 
 // Sends request and returns status code
@@ -35,11 +35,11 @@ func (client *Client) Prod() (string, error) {
 }
 
 func (client *Client) SetPath(value string) {
-	client.request.URL = client.request.URL.JoinPath(value)
+	client.URL = client.URL.JoinPath(value)
 }
 
 func (client *Client) AddQuery(key string, value string) {
-	query := client.request.URL.Query()
+	query := client.URL.Query()
 	vals := query[key]
 
 	//check if duplicate key/value pair
@@ -50,32 +50,38 @@ func (client *Client) AddQuery(key string, value string) {
 
 	if !duplicate {
 		query.Add(key, value)
-		client.request.URL.RawQuery = query.Encode()
+		client.URL.RawQuery = query.Encode()
 	}
 }
 
 func (client *Client) SetQuery(key string, value string) {
-	query := client.request.URL.Query()
+	query := client.URL.Query()
 	query.Set(key, value)
-	client.request.URL.RawQuery = query.Encode()
+	client.URL.RawQuery = query.Encode()
 }
 
 func (client *Client) ClearQuery() {
-	query := client.request.URL.Query()
+	query := client.URL.Query()
 	for k := range query {
 		delete(query, k)
 	}
 }
 
 func (client *Client) Get() (*http.Response, error) {
+	// make request
+	r, e := http.NewRequest(http.MethodGet, client.URL.String(), nil)
+	if e != nil {
+		return nil, e
+	}
+
 	// instantiate client
 	c := &http.Client{}
 	defer c.CloseIdleConnections()
 
-	fmt.Println("Performing query: ", client.request.URL.String())
+	fmt.Println("Performing query: ", r.URL.String())
 
 	// issue request
-	res, err := c.Do(client.request)
+	res, err := c.Do(r)
 	return res, err
 }
 
