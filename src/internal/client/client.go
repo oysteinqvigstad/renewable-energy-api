@@ -88,8 +88,15 @@ func (client *Client) Do(method string, reader io.Reader) (*http.Response, error
 }
 
 func (client *Client) Get() (*http.Response, error) {
-	res, err := client.Do(http.MethodGet, nil)
-	return res, err
+	return client.Do(http.MethodGet, nil)
+}
+
+func (client *Client) Post(body io.Reader) (*http.Response, error) {
+	if body == nil {
+		return nil, fmt.Errorf("client: body cannot be nil when performing POST request")
+	}
+
+	return client.Do(http.MethodPost, body)
 }
 
 func (client *Client) GetContent(output any) error {
