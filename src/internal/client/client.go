@@ -99,7 +99,7 @@ func (client *Client) Post(body io.Reader) (*http.Response, error) {
 	return client.Do(http.MethodPost, body)
 }
 
-func (client *Client) GetContent(output any) error {
+func (client *Client) GetAndDecode(output any) error {
 	// issue request
 	res, err := client.Get()
 	if err != nil {
