@@ -16,13 +16,17 @@ const (
 // Search for countries with name component.
 // TODO: Populate and return response struct.
 func SearchByName(name string) {
+	// make client object
 	cl := client.Client{URL: &url.URL{}}
 	cl.SetURL(API_BASE, API_VERSION, ENDPOINT_NAME, name)
+
+	// perform get request
 	resp, e := cl.Get()
 	if e != nil {
 		log.Fatal(e.Error())
 	}
 	defer resp.Body.Close()
 
+	// TEMP: print status until response struct is implemented
 	log.Printf("Response status: %v\n", resp.Status)
 }
