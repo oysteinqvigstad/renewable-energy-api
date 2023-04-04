@@ -45,7 +45,7 @@ func (client *Client) SetURL(base string, path ...string) error {
 }
 
 // Set path component of URL
-func (client *Client) SetPath(value ...string) {
+func (client *Client) JoinPath(value ...string) {
 	client.URL = client.URL.JoinPath(value...)
 }
 
