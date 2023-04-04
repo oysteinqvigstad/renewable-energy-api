@@ -13,13 +13,8 @@ type Client struct {
 }
 
 // Construct a new instance of Client.
-func NewClient(rawURL string) (*Client, error) {
-	URL, e := url.Parse(rawURL)
-	if e != nil {
-		return nil, e
-	}
-
-	return &Client{URL}, nil
+func NewClient() *Client {
+	return &Client{URL: &url.URL{}}
 }
 
 // Sends request and returns status code.
