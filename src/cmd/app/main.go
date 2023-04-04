@@ -17,9 +17,18 @@ func main() {
 
 	// TODO: create const
 	http.HandleFunc("/", handlers.DefaultHandler)
+	http.HandleFunc(handlers.RenewablesCurrentPath, handlers.EnergyCurrentHandler)
+	http.HandleFunc(handlers.RenewablesHistoryPath, handlers.EnergyHistoryHandler)
+	http.HandleFunc(handlers.NotificationsPath, handlers.NotificationHandler)
+	http.HandleFunc(handlers.StatusPath, handlers.StatusHandler)
 
-	log.Println("Starting server on port " + port + " ...")
-	log.Println("http://localhost:" + port)
+	domainNamePort := "http://localhost:" + port
+
+	log.Println("Started services on:")
+	log.Println(domainNamePort + handlers.RenewablesCurrentPath)
+	log.Println(domainNamePort + handlers.RenewablesHistoryPath)
+	log.Println(domainNamePort + handlers.NotificationsPath)
+	log.Println(domainNamePort + handlers.StatusPath)
 
 	app.ResetUptime()
 	log.Fatal(http.ListenAndServe(":"+port, nil))
