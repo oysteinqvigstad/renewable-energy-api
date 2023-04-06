@@ -1,5 +1,15 @@
 package db
 
+import (
+	"encoding/csv"
+	"io"
+	"log"
+	"os"
+	"strconv"
+)
+
+var globalRenewableDB []RenewablesAPIData
+
 // GetNeighbours returns a slice of 3-letter country codes for that specific country
 func GetNeighbours(name string) []string {
 	// TODO: implementation
@@ -34,4 +44,55 @@ func GetHistoricEnergyData(countryCode string, start, end int, sort bool) []Rene
 	// TODO: if {country} IS NOT set -> return all data? Will be very large return
 	return []RenewablesAPIData{}
 
+}
+
+// ParseRenewableCSV reads from the Renewable Share Enegery CSV from the
+// specified filepath into the global data structure "globalRenewableDB"
+func ParseRenewableCSV(filepath string) {
+	// opens file
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal("Could not open file"+filepath, err)
+	}
+	reader := csv.NewReader(file)
+	defer file.Close()
+
+	if len(globalRenewableDB) != 0 {
+		log.Fatal("The CSV has already been parsed. Should not be parsed again")
+	}
+
+	// the CSV file is ~5600 records long, allocating room for 6000 records
+	globalRenewableDB = make([]RenewablesAPIData, 0, 6000)
+
+	// discards header line
+	_, err = reader.Read()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// reads each record until EOF and appends them to the global structure
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// converts percentage to float64
+		percentage, err := strconv.ParseFloat(record[3], 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		entry := RenewablesAPIData{
+			Name:       record[0],
+			ISO:        record[1],
+			Year:       record[2],
+			Percentage: percentage,
+		}
+
+		globalRenewableDB = append(globalRenewableDB, entry)
+	}
 }
