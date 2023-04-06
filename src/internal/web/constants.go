@@ -1,4 +1,4 @@
-package handlers
+package web
 
 const DefaultPath = "/energy/v1/"
 const RenewablesCurrentPath = DefaultPath + "current/"
