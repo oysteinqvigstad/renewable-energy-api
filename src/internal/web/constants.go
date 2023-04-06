@@ -1,7 +1,9 @@
 package web
 
-const DefaultPath = "/energy/v1/"
-const RenewablesCurrentPath = DefaultPath + "current/"
-const RenewablesHistoryPath = DefaultPath + "history/"
-const NotificationsPath = DefaultPath + "notifications/"
-const StatusPath = DefaultPath + "status/"
+const (
+	DefaultPath           = "/energy/v1/"
+	RenewablesCurrentPath = DefaultPath + "current/"
+	RenewablesHistoryPath = DefaultPath + "history/"
+	NotificationsPath     = DefaultPath + "notifications/"
+	StatusPath            = DefaultPath + "status/"
+)

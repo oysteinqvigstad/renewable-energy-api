@@ -10,8 +10,12 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		{
-			http.Error(w, "Not implemented", http.StatusInternalServerError)
-			// TODO: implement simple informational handler
+			info := "Usage:\n" +
+				"/energy/v1/renewables/current/{country?}{?neighbours=bool?}\n" +
+				"/energy/v1/renewables/history/{country?}{?begin=year&end=year?}{?sortByValue=bool?}\n" +
+				"/energy/v1/notifications\n" +
+				"/energy/v1/status\n"
+			http.Error(w, info, http.StatusInternalServerError)
 		}
 	default:
 		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
@@ -22,7 +26,6 @@ func EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
-		//return // uncomment this for testing
 
 		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
 		neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
@@ -44,13 +47,20 @@ func EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
-		// TODO: get URL segment {country} (3 letter code)
-		// TODO: get query {begin}, {end} and {sortByValue}
-		// TODO: write fetch function for dataset
-		// TODO: if {sortByValue} is set -> Sort all the
-		// TODO: if {begin} IS set -> omit year attribute in country struct (returns single average)
-		// TODO: if {country} IS set -> return list of structs for that country
-		// TODO: if {country} IS NOT set -> return all data? Will be very large return
+
+		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
+		begin, _ := utils.GetQueryInt(r.URL, "begin")
+		end, _ := utils.GetQueryInt(r.URL, "end")
+		sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
+
+		switch len(segments) {
+		case 0:
+			httpRespondJSON(w, db.GetHistoricEnergyData("", begin, end, sort == "true"))
+		case 1:
+			httpRespondJSON(w, db.GetHistoricEnergyData(segments[0], begin, end, sort == "true"))
+		default:
+			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
+		}
 	default:
 		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
