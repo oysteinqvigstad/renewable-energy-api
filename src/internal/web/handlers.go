@@ -62,11 +62,11 @@ func EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		case 0:
 			httpRespondJSON(w, db.GlobalRenewableDB.GetHistoricAvg(begin, end, sort == "true"))
 		case 1:
-			returnData := db.GlobalRenewableDB.GetHistoric(segments[0], begin, end)
-			if len(returnData) == 0 {
-				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
-			} else {
+			returnData := db.GlobalRenewableDB.GetHistoric(segments[0], begin, end, sort == "true")
+			if len(returnData) > 0 {
 				httpRespondJSON(w, returnData)
+			} else {
+				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 			}
 		default:
 			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
