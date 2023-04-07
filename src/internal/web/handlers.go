@@ -25,16 +25,16 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 func EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
+		http.Error(w, "Partially Unimplemented", http.StatusServiceUnavailable)
 
 		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
 		neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
 
 		switch len(segments) {
 		case 0:
-			httpRespondJSON(w, db.GetCurrentEnergyData("", false))
+			httpRespondJSON(w, db.GlobalRenewableDB.GetLatest("", false))
 		case 1:
-			httpRespondJSON(w, db.GetCurrentEnergyData(segments[0], neighbours == "true"))
+			httpRespondJSON(w, db.GlobalRenewableDB.GetLatest(segments[0], neighbours == "true"))
 		default:
 			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 		}
