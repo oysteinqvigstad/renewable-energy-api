@@ -76,14 +76,61 @@ func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) []R
 	return data
 }
 
-func GetHistoricEnergyData(countryCode string, start, end int, sort bool) []RenewablesAPIData {
-	// TODO: implementation
-	// TODO: if {sortByValue} is set -> Sort all the
-	// TODO: if {begin} IS set -> omit year attribute in country struct (returns single average)
-	// TODO: if {country} IS set -> return list of structs for that country
-	// TODO: if {country} IS NOT set -> return all data? Will be very large return
-	return []RenewablesAPIData{}
+//func (db *RenewableDB) GetHistoric(countryCode string, start, end int, sort bool) []RenewablesAPIData {
+//	TODO: implementation
+//countryCode = strings.ToUpper(countryCode)
+//if len(countryCode) == 0 {
+//	return db.GetHistoricAvg(start, end, sort)
+//} else {
+//	return db.GetHistoric(countryCode, start, end)
+//}
+//
+// TODO: if {sortByValue} is set -> Sort all the
+// TODO: if {country} IS set -> return list of structs for that country
+// TODO: if {country} IS NOT set -> return all data? Will be very large return
 
+//}
+
+func (db *RenewableDB) GetHistoricAvg(start, end int, sort bool) []RenewablesAPIData {
+	var data []RenewablesAPIData
+	for _, recordList := range db.data {
+		for _, record := range recordList {
+			if yearInRange(record, start, end) {
+				data = append(data, record)
+			}
+		}
+	}
+	if sort == true {
+		// TODO: Sorting
+	}
+	return data
+
+}
+
+//sum := 0.0
+//for _, record := range recordList {
+//if yearInRange(record, start, end) {
+//sum = sum + record.Percentage
+//}
+//}
+//data = append(data, RenewablesAPIData{
+//Name:       recordList[0].Name,
+//ISO:        recordList[0].ISO,
+//Percentage: sum / float64(len(recordList)),
+//})
+
+func (db *RenewableDB) GetHistoric(countryCode string, start, end int) []RenewablesAPIData {
+	var data []RenewablesAPIData
+	countryCode = strings.ToUpper(countryCode)
+	recordList, ok := db.data[countryCode]
+	if ok {
+		for _, record := range recordList {
+			if yearInRange(record, start, end) {
+				data = append(data, record)
+			}
+		}
+	}
+	return data
 }
 
 // insert will append single struct into the map
@@ -102,7 +149,7 @@ func (db *RenewableDB) insert(record []string) {
 			Percentage: percentage,
 		}
 
-		// preallocating room for 60 historical data for each country. Will speed up append slightly
+		// allocating room for 60 historical data for each country. Will speed up append slightly
 		if _, ok := db.data[isoCode]; !ok {
 			db.data[isoCode] = make([]RenewablesAPIData, 0, 60)
 		}
@@ -147,4 +194,21 @@ func (db *RenewableDB) retrieveLatest(countryCode string) []RenewablesAPIData {
 		}
 	}
 	return data
+}
+
+func yearInRange(data RenewablesAPIData, start, end int) bool {
+	year, err := strconv.Atoi(data.Year)
+	if err != nil {
+		log.Fatal("Inconsistent data in RenewableDB, could not convert to int")
+	}
+	if start == 0 {
+		// no start specified
+		return end == 0 || year <= end
+	} else if end == 0 {
+		// no end specified
+		return year >= start
+	} else {
+		// otherwise check range at both ends
+		return start <= year && year <= end
+	}
 }

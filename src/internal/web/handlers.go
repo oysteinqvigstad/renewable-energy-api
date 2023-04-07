@@ -52,18 +52,22 @@ func EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 func EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
 
-		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
+		segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
 		begin, _ := utils.GetQueryInt(r.URL, "begin")
 		end, _ := utils.GetQueryInt(r.URL, "end")
 		sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
 
 		switch len(segments) {
 		case 0:
-			httpRespondJSON(w, db.GetHistoricEnergyData("", begin, end, sort == "true"))
+			httpRespondJSON(w, db.GlobalRenewableDB.GetHistoricAvg(begin, end, sort == "true"))
 		case 1:
-			httpRespondJSON(w, db.GetHistoricEnergyData(segments[0], begin, end, sort == "true"))
+			returnData := db.GlobalRenewableDB.GetHistoric(segments[0], begin, end)
+			if len(returnData) == 0 {
+				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
+			} else {
+				httpRespondJSON(w, returnData)
+			}
 		default:
 			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 		}
