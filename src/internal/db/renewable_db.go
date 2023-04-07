@@ -132,7 +132,7 @@ func (db *RenewableDB) retrieveLatest(countryCode string) []RenewablesAPIData {
 	// check if all countries should be retrieved
 	if len(countryCode) == 0 {
 		for _, country := range db.data {
-			if len(countryCode) > 0 {
+			if len(country) > 0 {
 				data = append(data, country[len(country)-1])
 			}
 		}
