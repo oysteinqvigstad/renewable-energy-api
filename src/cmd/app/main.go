@@ -15,7 +15,7 @@ func main() {
 		log.Println("$PORT has not been set. Default: 8080")
 		port = "8080" // TODO: use const
 	}
-	db.GlobalRenewableDB.ParseCSV("res/renewable-share-energy.csv")
+	energyData := db.ParseCSV("res/renewable-share-energy.csv")
 	utils.ResetUptime()
-	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port)))
+	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, energyData)))
 }

@@ -22,57 +22,61 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
-		neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
+func EnergyCurrentHandler(energyData db.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
+			neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
 
-		switch len(segments) {
-		case 0:
-			httpRespondJSON(w, db.GlobalRenewableDB.GetLatest("", false))
-		case 1:
-			returnData := db.GlobalRenewableDB.GetLatest(segments[0], neighbours == "true")
-			switch len(returnData) {
+			switch len(segments) {
 			case 0:
-				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
+				httpRespondJSON(w, energyData.GetLatest("", false))
 			case 1:
-				httpRespondJSON(w, returnData[0])
+				returnData := energyData.GetLatest(segments[0], neighbours == "true")
+				switch len(returnData) {
+				case 0:
+					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
+				case 1:
+					httpRespondJSON(w, returnData[0])
+				default:
+					httpRespondJSON(w, returnData)
+				}
 			default:
-				httpRespondJSON(w, returnData)
+				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 			}
 		default:
-			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
+			http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 		}
-	default:
-		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
 }
 
-func EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
+func EnergyHistoryHandler(energyData db.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
 
-		segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
-		begin, _ := utils.GetQueryInt(r.URL, "begin")
-		end, _ := utils.GetQueryInt(r.URL, "end")
-		sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
+			segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
+			begin, _ := utils.GetQueryInt(r.URL, "begin")
+			end, _ := utils.GetQueryInt(r.URL, "end")
+			sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
 
-		switch len(segments) {
-		case 0:
-			httpRespondJSON(w, db.GlobalRenewableDB.GetHistoricAvg(begin, end, sort == "true"))
-		case 1:
-			returnData := db.GlobalRenewableDB.GetHistoric(segments[0], begin, end, sort == "true")
-			if len(returnData) > 0 {
-				httpRespondJSON(w, returnData)
-			} else {
-				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
+			switch len(segments) {
+			case 0:
+				httpRespondJSON(w, energyData.GetHistoricAvg(begin, end, sort == "true"))
+			case 1:
+				returnData := energyData.GetHistoric(segments[0], begin, end, sort == "true")
+				if len(returnData) > 0 {
+					httpRespondJSON(w, returnData)
+				} else {
+					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
+				}
+			default:
+				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 			}
 		default:
-			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
+			http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 		}
-	default:
-		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
 }
 

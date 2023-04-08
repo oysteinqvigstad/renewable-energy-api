@@ -7,7 +7,4 @@ type YearRecord struct {
 	Percentage float64 `json:"percentage"`
 }
 
-// RenewableDB is a collection of YearRecords
-type RenewableDB struct {
-	data map[string][]YearRecord
-}
+type RenewableDB map[string][]YearRecord
