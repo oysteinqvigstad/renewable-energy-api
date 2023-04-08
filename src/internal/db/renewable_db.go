@@ -64,7 +64,7 @@ func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) Yea
 	return data
 }
 
-// GetHistoricAvg will calculate the average renewable energy percentage for all countries.
+// GetHistoricAvg will calculate the average renewable energy percentage for all stub_countries_api.
 // If a year range is specified then it will only calculate the average for those years,
 // and if `shouldSort` is enabled then it will sort by percentage in descending order
 func (db *RenewableDB) GetHistoricAvg(start, end int, sortByPercentage bool) YearRecordList {
@@ -141,11 +141,11 @@ func (db *RenewableDB) insert(record []string) {
 }
 
 // GetLatestEnergyData gets the newest data on record for a specific country
-// if an empty string is given then all countries should be returned
+// if an empty string is given then all stub_countries_api should be returned
 func (db *RenewableDB) retrieveLatest(countryCode string) YearRecordList {
 	var data YearRecordList
 
-	// check if all countries should be retrieved
+	// check if all stub_countries_api should be retrieved
 	if len(countryCode) == 0 {
 		for _, country := range *db {
 			if len(country) > 0 {
