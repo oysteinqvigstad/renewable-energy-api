@@ -1,17 +1,18 @@
 package web
 
 import (
+	"assignment2/internal/db"
 	"log"
 	"net/http"
 )
 
-func SetupRoutes(port string) *http.ServeMux {
+func SetupRoutes(port string, energyData db.RenewableDB) *http.ServeMux {
 	mux := http.ServeMux{}
 
 	// TODO: create const
 	mux.HandleFunc("/", DefaultHandler)
-	mux.HandleFunc(RenewablesCurrentPath, EnergyCurrentHandler)
-	mux.HandleFunc(RenewablesHistoryPath, EnergyHistoryHandler)
+	mux.HandleFunc(RenewablesCurrentPath, EnergyCurrentHandler(energyData))
+	mux.HandleFunc(RenewablesHistoryPath, EnergyHistoryHandler(energyData))
 	mux.HandleFunc(NotificationsPath, NotificationHandler)
 	mux.HandleFunc(StatusPath, StatusHandler)
 

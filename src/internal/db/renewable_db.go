@@ -10,19 +10,15 @@ import (
 	"strings"
 )
 
-var GlobalRenewableDB RenewableDB
-
-// ParseCSV will load a CSV file into GlobalRenewableDB
-func (db *RenewableDB) ParseCSV(filepath string) {
+// ParseCSV will load a CSV file into RenewableDB
+func ParseCSV(filepath string) RenewableDB {
+	db := make(RenewableDB)
 	// open file
 	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal("Could not open file"+filepath, err)
 	}
 	reader := csv.NewReader(file)
-
-	// initiate data structure
-	db.initiate()
 
 	// discards header line of the file
 	_, err = reader.Read()
@@ -49,15 +45,7 @@ func (db *RenewableDB) ParseCSV(filepath string) {
 	if err != nil {
 		log.Fatal("could not close file" + filepath + "maybe it has been closed already")
 	}
-}
-
-// initiate will make the GlobalRenewableDB structure
-func (db *RenewableDB) initiate() {
-	if db.data == nil {
-		db.data = make(map[string][]YearRecord)
-	} else {
-		log.Fatal("globalRenewableDB should not be initialized twice")
-	}
+	return db
 }
 
 // GetLatest retrieves the latest energy data for a single country, and returns
@@ -79,7 +67,7 @@ func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) []Y
 // and if `shouldSort` is enabled then it will sort by percentage in descending order
 func (db *RenewableDB) GetHistoricAvg(start, end int, shouldSort bool) []YearRecord {
 	var data []YearRecord
-	for _, recordList := range db.data {
+	for _, recordList := range *db {
 		sum := 0.0
 		numOfYears := 0
 		for _, record := range recordList {
@@ -111,7 +99,7 @@ func (db *RenewableDB) GetHistoricAvg(start, end int, shouldSort bool) []YearRec
 func (db *RenewableDB) GetHistoric(countryCode string, start, end int, shouldSort bool) []YearRecord {
 	var data []YearRecord
 	countryCode = strings.ToUpper(countryCode)
-	recordList, ok := db.data[countryCode]
+	recordList, ok := (*db)[countryCode]
 	if ok {
 		for _, record := range recordList {
 			if yearInRange(record, start, end) {
@@ -128,7 +116,7 @@ func (db *RenewableDB) GetHistoric(countryCode string, start, end int, shouldSor
 	return data
 }
 
-// insert will append single record into GlobalRenewableDB
+// insert will append single record into the renewableDB
 func (db *RenewableDB) insert(record []string) {
 	isoCode := strings.ToUpper(record[1])
 	if len(isoCode) == 3 {
@@ -144,17 +132,17 @@ func (db *RenewableDB) insert(record []string) {
 			Percentage: percentage,
 		}
 
-		if _, ok := db.data[isoCode]; !ok {
+		if _, ok := (*db)[isoCode]; !ok {
 			// allocating room for 60 historical data for each country. Will speed up append slightly
-			db.data[isoCode] = make([]YearRecord, 0, 60)
+			(*db)[isoCode] = make([]YearRecord, 0, 60)
 		}
-		db.data[isoCode] = append(db.data[isoCode], entry)
+		(*db)[isoCode] = append((*db)[isoCode], entry)
 	}
 }
 
 // sortYearAsc goes through every country and sorts the struct in ascending order by year
 func (db *RenewableDB) sortYearAsc() {
-	for _, val := range db.data {
+	for _, val := range *db {
 		sort.Slice(val, func(i, j int) bool {
 			first, err := strconv.Atoi(val[i].Year)
 			second, err2 := strconv.Atoi(val[j].Year)
@@ -173,7 +161,7 @@ func (db *RenewableDB) retrieveLatest(countryCode string) []YearRecord {
 
 	// check if all countries should be retrieved
 	if len(countryCode) == 0 {
-		for _, country := range db.data {
+		for _, country := range *db {
 			if len(country) > 0 {
 				data = append(data, country[len(country)-1])
 			}
@@ -181,7 +169,7 @@ func (db *RenewableDB) retrieveLatest(countryCode string) []YearRecord {
 		// otherwise just fetch the single country
 	} else {
 		countryCode = strings.ToUpper(countryCode)
-		country, ok := db.data[countryCode]
+		country, ok := (*db)[countryCode]
 		if ok {
 			if len(country) > 0 {
 				data = append(data, country[len(country)-1])
