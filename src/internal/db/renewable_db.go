@@ -39,7 +39,9 @@ func ParseCSV(filepath string) RenewableDB {
 	}
 
 	// sort each struct for every country by year in case the CSV file is in incorrect order
-	db.sortYearAsc()
+	for _, countryList := range db {
+		countryList.sortByYear(true)
+	}
 
 	err = file.Close()
 	if err != nil {
@@ -51,7 +53,7 @@ func ParseCSV(filepath string) RenewableDB {
 // GetLatest retrieves the latest energy data for a single country, and returns
 // it as a list of structs. If the `includeNeighbours` flag has been set, then the energy data
 // for the country's neighbour will be appended to the list
-func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) []YearRecord {
+func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) YearRecordList {
 	data := db.retrieveLatest(countryName)
 	if len(countryName) > 0 && includeNeighbours {
 		// TODO: Add support for neighbours
@@ -65,8 +67,8 @@ func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) []Y
 // GetHistoricAvg will calculate the average renewable energy percentage for all countries.
 // If a year range is specified then it will only calculate the average for those years,
 // and if `shouldSort` is enabled then it will sort by percentage in descending order
-func (db *RenewableDB) GetHistoricAvg(start, end int, shouldSort bool) []YearRecord {
-	var data []YearRecord
+func (db *RenewableDB) GetHistoricAvg(start, end int, sortByPercentage bool) YearRecordList {
+	var data YearRecordList
 	for _, recordList := range *db {
 		sum := 0.0
 		numOfYears := 0
@@ -85,10 +87,10 @@ func (db *RenewableDB) GetHistoricAvg(start, end int, shouldSort bool) []YearRec
 		}
 
 	}
-	if shouldSort {
-		sort.Slice(data, func(i, j int) bool {
-			return data[i].Percentage > data[j].Percentage
-		})
+	if sortByPercentage {
+		data.sortByPercentage(true)
+	} else {
+		data.sortByName(true)
 	}
 	return data
 }
@@ -96,8 +98,8 @@ func (db *RenewableDB) GetHistoricAvg(start, end int, shouldSort bool) []YearRec
 // GetHistoric will get the historic records of renewable energy share for a specific country,
 // and filter by years if `start` and/or `end` has been provided. If `shouldSort` is true,
 // then the results will be sorted in descending order
-func (db *RenewableDB) GetHistoric(countryCode string, start, end int, shouldSort bool) []YearRecord {
-	var data []YearRecord
+func (db *RenewableDB) GetHistoric(countryCode string, start, end int, sortByPercentage bool) YearRecordList {
+	var data YearRecordList
 	countryCode = strings.ToUpper(countryCode)
 	recordList, ok := (*db)[countryCode]
 	if ok {
@@ -107,10 +109,8 @@ func (db *RenewableDB) GetHistoric(countryCode string, start, end int, shouldSor
 			}
 		}
 	}
-	if shouldSort {
-		sort.Slice(data, func(i, j int) bool {
-			return data[i].Percentage > data[j].Percentage
-		})
+	if sortByPercentage {
+		data.sortByPercentage(true)
 	}
 
 	return data
@@ -134,30 +134,16 @@ func (db *RenewableDB) insert(record []string) {
 
 		if _, ok := (*db)[isoCode]; !ok {
 			// allocating room for 60 historical data for each country. Will speed up append slightly
-			(*db)[isoCode] = make([]YearRecord, 0, 60)
+			(*db)[isoCode] = make(YearRecordList, 0, 60)
 		}
 		(*db)[isoCode] = append((*db)[isoCode], entry)
 	}
 }
 
-// sortYearAsc goes through every country and sorts the struct in ascending order by year
-func (db *RenewableDB) sortYearAsc() {
-	for _, val := range *db {
-		sort.Slice(val, func(i, j int) bool {
-			first, err := strconv.Atoi(val[i].Year)
-			second, err2 := strconv.Atoi(val[j].Year)
-			if err != nil || err2 != nil {
-				log.Fatal("Inconsistent data in globalRenewAbleDB. Could not parse string to int")
-			}
-			return first < second
-		})
-	}
-}
-
 // GetLatestEnergyData gets the newest data on record for a specific country
 // if an empty string is given then all countries should be returned
-func (db *RenewableDB) retrieveLatest(countryCode string) []YearRecord {
-	var data []YearRecord
+func (db *RenewableDB) retrieveLatest(countryCode string) YearRecordList {
+	var data YearRecordList
 
 	// check if all countries should be retrieved
 	if len(countryCode) == 0 {
@@ -176,6 +162,7 @@ func (db *RenewableDB) retrieveLatest(countryCode string) []YearRecord {
 			}
 		}
 	}
+	data.sortByName(true)
 	return data
 }
 
@@ -193,4 +180,43 @@ func yearInRange(data YearRecord, start, end int) bool {
 		(noEndSpecified && year >= start) || // no end
 		(start <= year && year <= end) // valid range
 
+}
+
+// sortByYear takes a YearRecordList and sorts it by percentage
+func (list YearRecordList) sortByPercentage(descending bool) {
+	sort.Slice(list, func(i, j int) bool {
+		if descending {
+			return list[i].Percentage > list[j].Percentage
+		} else {
+			return list[i].Percentage < list[j].Percentage
+
+		}
+	})
+}
+
+// sortByYear takes a YearRecordList and sorts it by name
+func (list YearRecordList) sortByName(ascending bool) {
+	sort.Slice(list, func(i, j int) bool {
+		if ascending {
+			return list[i].Name < list[j].Name
+		} else {
+			return list[i].Name > list[j].Name
+		}
+	})
+}
+
+// sortByYear takes a YearRecordList and sorts it by year
+func (list YearRecordList) sortByYear(ascending bool) {
+	sort.Slice(list, func(i, j int) bool {
+		first, err1 := strconv.Atoi(list[i].Year)
+		second, err2 := strconv.Atoi(list[j].Year)
+		if err1 != nil || err2 != nil {
+			log.Fatal("Inconsistent data in YearRecordList. Could not parse year string to int")
+		}
+		if ascending {
+			return first < second
+		} else {
+			return first > second
+		}
+	})
 }
