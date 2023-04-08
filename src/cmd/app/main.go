@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 		log.Println("$PORT has not been set. Default: 8080")
 		port = "8080" // TODO: use const
 	}
-	energyData := db.ParseCSV("res/renewable-share-energy.csv")
+	energyData := db.ParseCSV(path.Join("res", db.CSVFilePath))
 	utils.ResetUptime()
 	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, energyData)))
 }
