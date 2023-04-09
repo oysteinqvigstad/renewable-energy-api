@@ -43,14 +43,13 @@ func TestEnergyCurrentHandler(t *testing.T) {
 		t.Fatal("Expected 2021 got: ", dataSingle.Percentage)
 	}
 
-	// TODO: Test 3: tests to see if there are more than one neighbours to norway
-	/*
-		http://localhost:8080/energy/v1/current/nor?neighbours=true
-		HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor?neighbours=true", &dataList)
-		if len(dataList) >= 1 {
-			t.Fatal("Expected more than 1 country, got : ", len(dataList))
-		} */
-	// Status codes
+	// Test 3: Verify that the API returns more than one neighboring country for Norway when the 'neighbours' query parameter is set to 'true'.
+	HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor?neighbours=true", &dataList)
+	if len(dataList) <= 1 {
+		t.Fatal("Expected more than 1 country, got : ", len(dataList))
+	}
+
+	// Status codes tests:
 
 	// Test 1: Testing whether a Bad Request error is returned when an invalid country code is provided in the URL.
 	statusCode1 := HttpGetStatusCode(t, server.URL+RenewablesCurrentPath+"norr")
@@ -127,7 +126,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 		t.Fatal("Wrong sort order: expected the first value to be greater than the last value")
 	}
 
-	// Status codes
+	// Status codes tests:
 	// Test 1: Testing whether a Bad Request error is returned when an invalid country code is provided in the URL.
 	statusCode1 := HttpGetStatusCode(t, server.URL+RenewablesHistoryPath+"norr")
 	if statusCode1 != http.StatusBadRequest {
