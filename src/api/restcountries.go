@@ -38,10 +38,10 @@ func SearchByName(name string) {
 
 // GetBorders takes a cca3 code and returns
 // an array of cca3 codes for bordering countries.
-func GetBorders(cca string) ([]string, error) {
-	// Instante client
-	cl := newClient()
-	cl.JoinPath(ENDPOINT_CCA, cca)
+func GetNeighboursCca(cca string) ([]string, error) {
+	// Instantiate client
+	cl := client.NewClient()
+	cl.SetURL(API_BASE, API_VERSION, ENDPOINT_CCA, cca)
 	cl.AddQuery("fields", "borders")
 
 	// Perform GET request
@@ -49,11 +49,4 @@ func GetBorders(cca string) ([]string, error) {
 	err := cl.GetAndDecode(&resp)
 
 	return resp.Borders, err
-}
-
-func newClient() *client.Client {
-	cl := client.Client{URL: &url.URL{}}
-	cl.SetURL(API_BASE, API_VERSION)
-
-	return &cl
 }
