@@ -41,6 +41,13 @@ func TestAddQuery(t *testing.T) {
 	if result != want {
 		t.Errorf("c.URL.String() = %v, want %v", result, want)
 	}
+
+	// make sure orphan keys are not added
+	c.AddQuery("emptyKey")
+
+	if result != want {
+		t.Errorf("c.URL.String() = %v, want %v", result, want)
+	}
 }
 
 func TestSetQuery(t *testing.T) {
