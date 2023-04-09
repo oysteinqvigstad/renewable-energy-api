@@ -42,12 +42,21 @@ func GetNeighbours(name string) ([]string, error) {
 func GetNeighboursCca(cca string) ([]string, error) {
 	// Instantiate client
 	cl := client.NewClient()
-	cl.SetURL(API_BASE, API_VERSION, ENDPOINT_CCA, cca)
+	err := cl.SetURL(API_BASE, API_VERSION, ENDPOINT_CCA, cca)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add query
 	cl.AddQuery("fields", "borders")
 
 	// Perform GET request
 	resp := bordersResp{}
-	err := cl.GetAndDecode(&resp)
+	err = cl.GetAndDecode(&resp)
 
-	return resp.Borders, err
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Borders, nil
 }
