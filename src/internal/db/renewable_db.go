@@ -1,6 +1,7 @@
 package db
 
 import (
+	"assignment2/api"
 	"encoding/csv"
 	"io"
 	"log"
@@ -55,11 +56,14 @@ func ParseCSV(filepath string) RenewableDB {
 // for the country's neighbour will be appended to the list
 func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) YearRecordList {
 	data := db.retrieveLatest(countryName)
+	// adding neighbours if applicable
 	if len(countryName) > 0 && includeNeighbours {
-		// TODO: Add support for neighbours
-		//for _, neighbour := range GetNeighbours(countryName) {
-		//	data = append(data, db.retrieveLatest(neighbour)...)
-		//}
+		neighbours, err := api.GetNeighboursCca(countryName)
+		if err == nil {
+			for _, neighbour := range neighbours {
+				data = append(data, db.retrieveLatest(neighbour)...)
+			}
+		}
 	}
 	return data
 }
