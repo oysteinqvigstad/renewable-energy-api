@@ -2,8 +2,6 @@ package api
 
 import (
 	"assignment2/internal/client"
-	"log"
-	"net/url"
 )
 
 const (
@@ -15,25 +13,6 @@ const (
 
 type bordersResp struct {
 	Borders []string `json:"borders"`
-}
-
-// Search for countries by name.
-// Only accepts exact matches.
-// TODO: Populate and return response struct.
-func SearchByName(name string) {
-	// make client object
-	cl := client.Client{URL: &url.URL{}}
-	cl.SetURL(API_BASE, API_VERSION, ENDPOINT_NAME, name)
-
-	// perform get request
-	resp, e := cl.Get()
-	if e != nil {
-		log.Fatal(e.Error())
-	}
-	defer resp.Body.Close()
-
-	// TEMP: print status until response struct is implemented
-	log.Printf("Response status: %v\n", resp.Status)
 }
 
 // GetBorders takes a cca3 code and returns
