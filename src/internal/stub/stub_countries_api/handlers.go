@@ -21,7 +21,7 @@ func StubHandler(data *JSONdata) func(w http.ResponseWriter, r *http.Request) {
 				case "all":
 					httpRespondJSON(w, data)
 				default:
-					http.Error(w, "Unsupported URL segment, Usage: alpha/{ccn3}", http.StatusNotImplemented)
+					http.Error(w, "Unsupported URL segment, Usage: alpha/{ccn3}", http.StatusBadRequest)
 				}
 			case 2:
 				switch segments[0] {
@@ -33,7 +33,7 @@ func StubHandler(data *JSONdata) func(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "segment: "+segments[0]+" not supported", http.StatusNotImplemented)
 				}
 			default:
-				http.Error(w, "Unsupported URL segment, Usage: alpha/{cca3}", http.StatusNotImplemented)
+				http.Error(w, "Unsupported URL segment, Usage: alpha/{cca3}", http.StatusBadRequest)
 			}
 		default:
 			http.Error(w, "Method not supported", http.StatusNotImplemented)
