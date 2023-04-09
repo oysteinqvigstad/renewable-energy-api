@@ -51,19 +51,23 @@ func (client *Client) JoinPath(value ...string) {
 
 // Add a key/value pair to the query.
 // Duplicate values are discarded.
-func (client *Client) AddQuery(key string, value string) {
-	query := client.URL.Query()
-	vals := query[key]
+func (client *Client) AddQuery(key string, value ...string) {
+	for i := range value {
+		// get current query
+		query := client.URL.Query()
+		vals := query[key]
 
-	//check if duplicate key/value pair
-	duplicate := false
-	for i := range vals {
-		duplicate = duplicate || vals[i] == value
-	}
+		// check if duplicate key/value pair
+		duplicate := false
+		for j := range vals {
+			duplicate = duplicate || vals[j] == value[i]
+		}
 
-	if !duplicate {
-		query.Add(key, value)
-		client.URL.RawQuery = query.Encode()
+		// add value if not duplicate
+		if !duplicate {
+			query.Add(key, value[i])
+			client.URL.RawQuery = query.Encode()
+		}
 	}
 }
 
