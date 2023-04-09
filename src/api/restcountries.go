@@ -15,6 +15,28 @@ type bordersResp struct {
 	Borders []string `json:"borders"`
 }
 
+func GetNeighbours(name string) ([]string, error) {
+	// Instantiate client
+	cl := client.NewClient()
+	err := cl.SetURL(API_BASE, API_VERSION, ENDPOINT_NAME, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add queries
+	cl.AddQuery("fullText", "true")
+	cl.AddQuery("fields", "borders")
+
+	// Perform get request
+	resp := []bordersResp{}
+	err = cl.GetAndDecode(&resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp[0].Borders, nil
+}
+
 // GetBorders takes a cca3 code and returns
 // an array of cca3 codes for bordering countries.
 func GetNeighboursCca(cca string) ([]string, error) {
