@@ -80,10 +80,7 @@ func (client *Client) SetQuery(key string, value string) {
 
 // Clear all queries from URL.
 func (client *Client) ClearQuery() {
-	query := client.URL.Query()
-	for k := range query {
-		delete(query, k)
-	}
+	client.URL.RawQuery = ""
 }
 
 // Instantiates a request, http client, and performs request.
