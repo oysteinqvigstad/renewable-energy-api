@@ -20,6 +20,7 @@ func httpRespondJSON(w http.ResponseWriter, data any) {
 // from a specific url
 func HttpGetAndDecode(t *testing.T, url string, data any) {
 	client := http.Client{}
+	defer client.CloseIdleConnections()
 	res, err := client.Get(url)
 	if err != nil {
 		t.Fatal("Get request to URL failed:", err.Error())
@@ -29,4 +30,15 @@ func HttpGetAndDecode(t *testing.T, url string, data any) {
 	if err != nil {
 		t.Fatal("Error during decoding", err.Error())
 	}
+}
+
+// HttpGetStatusCode returns the statuscode of a GET request
+func HttpGetStatusCode(t *testing.T, url string) int {
+	client := http.Client{}
+	defer client.CloseIdleConnections()
+	res, err := client.Get(url)
+	if err != nil {
+		t.Fatal("Get request to URL failed:", err.Error())
+	}
+	return res.StatusCode
 }
