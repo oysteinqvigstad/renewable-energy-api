@@ -15,6 +15,8 @@ type bordersResp struct {
 	Borders []string `json:"borders"`
 }
 
+// GetNeighbours takes a name string
+// and returns an array of CCA3 code strings
 func GetNeighbours(name string) ([]string, error) {
 	// Instantiate client
 	cl := client.NewClient()
@@ -37,7 +39,7 @@ func GetNeighbours(name string) ([]string, error) {
 	return resp[0].Borders, nil
 }
 
-// GetBorders takes a cca3 code and returns
+// GetNeighboursCca takes a cca3 code and returns
 // an array of cca3 codes for bordering countries.
 func GetNeighboursCca(cca string) ([]string, error) {
 	// Instantiate client
