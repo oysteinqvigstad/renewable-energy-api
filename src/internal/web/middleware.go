@@ -1,8 +1,10 @@
 package web
 
 import (
+	"assignment2/internal/db"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -14,6 +16,7 @@ func httpRespondJSON(w http.ResponseWriter, data any) {
 	if err != nil {
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
 	}
+	go invocate(data)
 }
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
@@ -41,4 +44,18 @@ func HttpGetStatusCode(t *testing.T, url string) int {
 		t.Fatal("Get request to URL failed:", err.Error())
 	}
 	return res.StatusCode
+}
+
+func invocate(data any) {
+	var invocationList []string
+	switch data.(type) {
+	case db.YearRecordList:
+		invocationList = data.(db.YearRecordList).Invocate()
+	case db.YearRecord:
+		invocationList = db.YearRecordList{data.(db.YearRecord)}.Invocate()
+	}
+	if len(invocationList) > 0 {
+		println("Invocated: " + strings.Join(invocationList, ","))
+		// TODO: Write logic for what should happen on each invocation. Should we store the count on firebase?
+	}
 }

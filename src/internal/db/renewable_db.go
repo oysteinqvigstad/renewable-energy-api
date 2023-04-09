@@ -220,3 +220,15 @@ func (list YearRecordList) sortByYear(ascending bool) {
 		}
 	})
 }
+
+func (list YearRecordList) Invocate() []string {
+	seen := map[string]bool{}
+	result := []string{}
+	for _, record := range list {
+		if !seen[record.ISO] {
+			seen[record.ISO] = true
+			result = append(result, record.ISO)
+		}
+	}
+	return result
+}
