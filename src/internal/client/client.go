@@ -52,20 +52,20 @@ func (client *Client) JoinPath(value ...string) {
 // Add a key/value pair to the query.
 // Duplicate values are discarded.
 func (client *Client) AddQuery(key string, value ...string) {
-	for i := range value {
+	for _, newValue := range value {
 		// get current query
 		query := client.URL.Query()
-		vals := query[key]
+		oldVals := query[key]
 
 		// check if duplicate key/value pair
 		duplicate := false
-		for j := range vals {
-			duplicate = duplicate || vals[j] == value[i]
+		for _, oldValue := range oldVals {
+			duplicate = duplicate || oldValue == newValue
 		}
 
-		// add value if not duplicate
+		// add newValue if not duplicate
 		if !duplicate {
-			query.Add(key, value[i])
+			query.Add(key, newValue)
 			client.URL.RawQuery = query.Encode()
 		}
 	}
