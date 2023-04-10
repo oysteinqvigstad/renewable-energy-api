@@ -1,4 +1,4 @@
-package db
+package datastore
 
 const (
 	CSVFilePath = "renewable-share-energy.csv"

@@ -1,12 +1,12 @@
 package web
 
 import (
-	"assignment2/internal/db"
+	"assignment2/internal/datastore"
 	"log"
 	"net/http"
 )
 
-func SetupRoutes(port string, energyData db.RenewableDB) *http.ServeMux {
+func SetupRoutes(port string, energyData datastore.RenewableDB) *http.ServeMux {
 	mux := http.ServeMux{}
 
 	// TODO: create const
