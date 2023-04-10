@@ -1,7 +1,7 @@
 package web
 
 import (
-	"assignment2/internal/db"
+	"assignment2/internal/datastore"
 	"assignment2/internal/utils"
 	"net/http"
 )
@@ -22,7 +22,7 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EnergyCurrentHandler(energyData db.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyCurrentHandler(energyData datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -51,7 +51,7 @@ func EnergyCurrentHandler(energyData db.RenewableDB) func(w http.ResponseWriter,
 	}
 }
 
-func EnergyHistoryHandler(energyData db.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyHistoryHandler(energyData datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

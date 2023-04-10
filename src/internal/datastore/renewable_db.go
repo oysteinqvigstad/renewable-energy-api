@@ -1,4 +1,4 @@
-package db
+package datastore
 
 import (
 	"assignment2/api"

@@ -1,7 +1,7 @@
 package web
 
 import (
-	"assignment2/internal/db"
+	"assignment2/internal/datastore"
 	"net/http"
 	"net/http/httptest"
 	"path"
@@ -19,12 +19,12 @@ func TestEnergyDefaultHandler(t *testing.T) {
 
 // TestEnergyCurrentHandler tests the EnergyCurrentHandler function.
 func TestEnergyCurrentHandler(t *testing.T) {
-	energyData := db.ParseCSV(path.Join("..", "..", "res", db.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
 	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(energyData)))
 	defer server.Close()
 
-	dataSingle := db.YearRecord{}
-	dataList := db.YearRecordList{}
+	dataSingle := datastore.YearRecord{}
+	dataList := datastore.YearRecordList{}
 
 	// Test 1: Get all current country data
 	HttpGetAndDecode(t, server.URL+RenewablesCurrentPath, &dataList)
@@ -67,7 +67,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyCurrentHandler
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
-	energyData := db.ParseCSV(path.Join("..", "..", "res", db.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
 	handler := EnergyCurrentHandler(energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
@@ -90,12 +90,12 @@ func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 
 // TestEnergyHistoryHandler tests the EnergyHistoryHandler function.
 func TestEnergyHistoryHandler(t *testing.T) {
-	energyData := db.ParseCSV(path.Join("..", "..", "res", db.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
 	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(energyData)))
 	defer server.Close()
 
-	//dataSingle := db.YearRecord{}
-	dataList := db.YearRecordList{}
+	//dataSingle := datastore.YearRecord{}
+	dataList := datastore.YearRecordList{}
 
 	//Test 1: Get the current countries renewable energy for a specific year: 2005
 	HttpGetAndDecode(t, server.URL+RenewablesHistoryPath+"nor?begin=2005&end=2005", &dataList)
@@ -149,7 +149,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyHistoryHandler
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
-	energyData := db.ParseCSV(path.Join("..", "..", "res", db.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
 	handler := EnergyHistoryHandler(energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
@@ -170,7 +170,7 @@ func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
 	}
 }
 
-func calculateAverage(dataList db.YearRecordList) float64 {
+func calculateAverage(dataList datastore.YearRecordList) float64 {
 	sum := 0.0
 	for _, data := range dataList {
 		sum += data.Percentage

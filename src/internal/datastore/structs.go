@@ -1,4 +1,4 @@
-package db
+package datastore
 
 type YearRecord struct {
 	Name       string  `json:"name"`

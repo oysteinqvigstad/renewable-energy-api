@@ -1,7 +1,7 @@
 package web
 
 import (
-	"assignment2/internal/db"
+	"assignment2/internal/datastore"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -49,13 +49,13 @@ func HttpGetStatusCode(t *testing.T, url string) int {
 func invocate(data any) {
 	var invocationList []string
 	switch data.(type) {
-	case db.YearRecordList:
-		invocationList = data.(db.YearRecordList).Invocate()
-	case db.YearRecord:
-		invocationList = db.YearRecordList{data.(db.YearRecord)}.Invocate()
+	case datastore.YearRecordList:
+		invocationList = data.(datastore.YearRecordList).Invocate()
+	case datastore.YearRecord:
+		invocationList = datastore.YearRecordList{data.(datastore.YearRecord)}.Invocate()
 	}
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-		// TODO: Write logic for what should happen on each invocation. Should we store the count on firebase?
+		// TODO: Write logic for what should happen on each invocation. Should we store the count on firebase_client?
 	}
 }
