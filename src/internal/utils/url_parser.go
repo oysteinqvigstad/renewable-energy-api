@@ -43,3 +43,9 @@ func GetQueryInt(url *url.URL, name string) (int, error) {
 		}
 	}
 }
+
+// removeSlashes replaces slashes with underscores in the input URL.
+func removeSlashes(url string) string {
+	noSlash := strings.ReplaceAll(url, "/", "_")
+	return noSlash
+}
