@@ -5,17 +5,11 @@ import (
 	"cloud.google.com/go/firestore" // Firestore-specific support
 	"context"                       // State handling across API boundaries; part of native GoLang API
 	firebase "firebase.google.com/go"
+	"fmt"
 	"google.golang.org/api/option"
 	"log"
 	"time"
 )
-
-type InvocationRegistration struct {
-	WebhookID string `json:"webhook_id"`
-	URL       string `json:"url"`
-	Country   string `json:"country"`
-	Calls     int    `json:"calls"`
-}
 
 /*
 FirebaseClient is a wrapper around Firestore client that includes
@@ -67,7 +61,7 @@ func (client *FirebaseClient) SetInvocationCount(ccna3 string, number int) {
 }
 
 // GetInvocationCount retrieves the invocation count for a given ccna3 (Country Code and Network Access Area)
-func (client *FirebaseClient) GetInvocationCount(ccna3 string) {
+func (client *FirebaseClient) GetInvocationCount(ccna3 string) (int, error) {
 	// e.g. GetInvocationCount("NOR")
 
 	// Get a reference to the document with the given ccna3 in the collection
@@ -78,18 +72,51 @@ func (client *FirebaseClient) GetInvocationCount(ccna3 string) {
 	if err != nil {
 		// Log an error message if there was an issue retrieving the document
 		log.Println("Error extracting body of returned document of message " + ccna3)
-		return
+		return 0, err
 	}
 	// Get the value of the 'count' field from the document
 	count, err := docField.DataAt("count")
 	if err != nil {
 		// Log an error message if there was an issue reading the 'count' field from the document
 		log.Printf("Failed to read 'count' field from document: %v", err)
-		return
+		return 0, err
 	} else {
 		// Log the invocation count for the given ccna3
 		log.Printf("Invocation count for %s is %d", ccna3, count)
+		switch c := count.(type) {
+		case int:
+			return c, nil
+		case int64:
+			return int(c), nil
+		default:
+			return 0, fmt.Errorf("unsupported type returned from GetInvocationCount: %T", c)
+		}
 	}
+}
+
+func (client *FirebaseClient) GetAllInvocationCounts() map[string]int {
+	data := map[string]int{}
+	docs, err := client.getAllDocuments(CollectionInvocationCounts)
+	if err != nil {
+		log.Printf("Could not fetch invocation counts from firestore")
+		return data
+	}
+	for _, docField := range docs {
+		if count, err := docField.DataAt("count"); err == nil {
+			data[docField.Ref.ID] = int(count.(int64))
+		}
+	}
+	return data
+}
+
+func (client *FirebaseClient) getAllDocuments(collection string) ([]*firestore.DocumentSnapshot, error) {
+	docRef := client.client.Collection(collection).Documents(client.ctx)
+	docs, err := docRef.GetAll()
+	if err != nil {
+		log.Printf("Failed to get documents: #{err}")
+		return nil, err
+	}
+	return docs, nil
 }
 
 // SetRenewablesCache stores a YearRecordList in the renewables cache collection using the given URL as the document identifier.
@@ -180,4 +207,43 @@ func (client *FirebaseClient) GetAllInvocationRegistrations() []InvocationRegist
 		registrations = append(registrations, registration)
 	}
 	return registrations
+}
+
+//func (client *FirebaseClient) BulkWriteInvocationCounts(ccna3map map[string]int) {
+//	bulkWriter := client.client.BulkWriter(client.ctx)
+//	for ccna3, count := range ccna3map {
+//		docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
+//		bulkWriter.Set(docRef, map[string]interface{}{"count": count})
+//	}
+//	bulkWriter.End()
+//
+//}
+
+func (client *FirebaseClient) BulkWrite(updates *BundledUpdate) {
+	bulkWriter := client.client.BulkWriter(client.ctx)
+
+	// updating invocation counts
+	for ccna3, count := range updates.InvocationCount {
+		docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
+		bulkWriter.Set(docRef, map[string]interface{}{"count": count})
+	}
+
+	// updating registrations
+	for _, reg := range updates.Registrations {
+		docRef := client.client.Collection(CollectionInvocationRegistrations).Doc(reg.Registration.WebhookID)
+		if reg.Add {
+			bulkWriter.Set(docRef, reg.Registration)
+		} else {
+			bulkWriter.Delete(docRef)
+		}
+	}
+
+	// updating cache
+	//for ccna3, count := range updates.Cache {
+	//	docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
+	//	bulkWriter.Set(docRef, map[string]interface{}{"count": count})
+	//}
+
+	bulkWriter.End()
+
 }
