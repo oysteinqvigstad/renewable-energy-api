@@ -223,8 +223,8 @@ func (client *FirebaseClient) BulkWrite(updates *BundledUpdate) {
 	bulkWriter := client.client.BulkWriter(client.ctx)
 
 	// updating invocation counts
-	for ccna3, count := range updates.InvocationCount {
-		docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
+	for countryCode, count := range updates.InvocationCount {
+		docRef := client.client.Collection(CollectionInvocationCounts).Doc(countryCode)
 		bulkWriter.Set(docRef, map[string]interface{}{"count": count})
 	}
 
