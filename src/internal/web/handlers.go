@@ -85,7 +85,7 @@ func NotificationHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
 	case http.MethodPost:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
+		registerWebhook(w, r)
 	case http.MethodDelete:
 		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
 	default:

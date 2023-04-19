@@ -6,4 +6,5 @@ const (
 	RenewablesHistoryPath = DefaultPath + "renewables/history/"
 	NotificationsPath     = DefaultPath + "notifications/"
 	StatusPath            = DefaultPath + "status/"
+	FirebaseUpdateFreq    = 5 // update firebase every 5 seconds
 )

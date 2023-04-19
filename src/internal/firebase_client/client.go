@@ -5,7 +5,6 @@ import (
 	"cloud.google.com/go/firestore" // Firestore-specific support
 	"context"                       // State handling across API boundaries; part of native GoLang API
 	firebase "firebase.google.com/go"
-	"fmt"
 	"google.golang.org/api/option"
 	"log"
 	"time"
@@ -61,7 +60,7 @@ func (client *FirebaseClient) SetInvocationCount(ccna3 string, number int) {
 }
 
 // GetInvocationCount retrieves the invocation count for a given ccna3 (Country Code and Network Access Area)
-func (client *FirebaseClient) GetInvocationCount(ccna3 string) (int, error) {
+func (client *FirebaseClient) GetInvocationCount(ccna3 string) (int64, error) {
 	// e.g. GetInvocationCount("NOR")
 
 	// Get a reference to the document with the given ccna3 in the collection
@@ -80,22 +79,12 @@ func (client *FirebaseClient) GetInvocationCount(ccna3 string) (int, error) {
 		// Log an error message if there was an issue reading the 'count' field from the document
 		log.Printf("Failed to read 'count' field from document: %v", err)
 		return 0, err
-	} else {
-		// Log the invocation count for the given ccna3
-		log.Printf("Invocation count for %s is %d", ccna3, count)
-		switch c := count.(type) {
-		case int:
-			return c, nil
-		case int64:
-			return int(c), nil
-		default:
-			return 0, fmt.Errorf("unsupported type returned from GetInvocationCount: %T", c)
-		}
 	}
+	return count.(int64), nil
 }
 
-func (client *FirebaseClient) GetAllInvocationCounts() map[string]int {
-	data := map[string]int{}
+func (client *FirebaseClient) GetAllInvocationCounts() map[string]int64 {
+	data := map[string]int64{}
 	docs, err := client.getAllDocuments(CollectionInvocationCounts)
 	if err != nil {
 		log.Printf("Could not fetch invocation counts from firestore")
@@ -103,7 +92,7 @@ func (client *FirebaseClient) GetAllInvocationCounts() map[string]int {
 	}
 	for _, docField := range docs {
 		if count, err := docField.DataAt("count"); err == nil {
-			data[docField.Ref.ID] = int(count.(int64))
+			data[docField.Ref.ID] = count.(int64)
 		}
 	}
 	return data
@@ -185,28 +174,23 @@ func (client *FirebaseClient) SetInvocationRegistration(registration InvocationR
 }
 
 // GetAllInvocationRegistrations retrieves all InvocationRegistration documents from Firestore
-func (client *FirebaseClient) GetAllInvocationRegistrations() []InvocationRegistration {
-	// e.g. GetAllInvocationRegistrations()
-	// Create a DocumentIterator for the CollectionInvocationRegistrations collection
-	docIterator := client.client.Collection(CollectionInvocationRegistrations).Documents(client.ctx)
-	docs, err := docIterator.GetAll()
+func (client *FirebaseClient) GetAllInvocationRegistrations() map[string]InvocationRegistration {
+	result := map[string]InvocationRegistration{}
+	docs, err := client.getAllDocuments(CollectionInvocationRegistrations)
 	if err != nil {
-		log.Printf("Failed to get all invocation registrations: %v", err)
-		return []InvocationRegistration{}
+		log.Printf("Could not fetch data from firestore")
+		return result
 	}
-	// Initialize an empty slice of InvocationRegistration
-	registrations := []InvocationRegistration{}
-
-	// Iterate through the retrieved documents and append them to the slice
 	for _, doc := range docs {
 		var registration InvocationRegistration
-		if err := doc.DataTo(&registration); err != nil {
-			log.Printf("Failed to convert document data to InvocationRegistration: %v", err)
-			continue
+		err = doc.DataTo(&registration)
+		if err != nil {
+			return result
 		}
-		registrations = append(registrations, registration)
+		result[doc.Ref.ID] = registration
+
 	}
-	return registrations
+	return result
 }
 
 //func (client *FirebaseClient) BulkWriteInvocationCounts(ccna3map map[string]int) {

@@ -2,13 +2,17 @@ package web
 
 import (
 	"assignment2/internal/firebase_client"
+	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
+	"strings"
 	"time"
 )
 
 var (
-	invocationCount     map[string]int
+	invocationCount     map[string]int64
 	registrations       map[string]firebase_client.InvocationRegistration
 	invocateChannel     chan string
 	registrationChannel chan firebase_client.RegistrationAction
@@ -26,7 +30,7 @@ func StartWebhookService() {
 }
 
 func initiateDatastructures() {
-	invocationCount = make(map[string]int)
+	invocationCount = make(map[string]int64)
 	registrations = make(map[string]firebase_client.InvocationRegistration)
 	invocateChannel = make(chan string)
 	registrationChannel = make(chan firebase_client.RegistrationAction)
@@ -40,7 +44,7 @@ func retrieveRegistrationsFromFirestore() {
 		log.Println("Could not initiate firebase client")
 	}
 	invocationCount = client.GetAllInvocationCounts()
-
+	registrations = client.GetAllInvocationRegistrations()
 }
 
 func Invocate(ccna3 []string) {
@@ -49,20 +53,6 @@ func Invocate(ccna3 []string) {
 		invocateChannel <- code
 	}
 	// TODO: write go routine for triggering webhook
-}
-
-func AddWebhookRegistration(newReg firebase_client.InvocationRegistration) (string, bool) {
-	newReg.WebhookID = generateWebhookID()
-	if _, ok := registrations[newReg.WebhookID]; !ok {
-		data := firebase_client.RegistrationAction{
-			Add:          true,
-			Registration: newReg,
-		}
-		registrations[newReg.WebhookID] = newReg
-		registrationChannel <- data
-		return newReg.WebhookID, true
-	}
-	return "", false
 }
 
 func DelWebhookRegistration(webhookId string) bool {
@@ -98,7 +88,7 @@ func generateWebhookID() string {
 }
 
 func firebaseWorker() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(FirebaseUpdateFreq * time.Second)
 	client, err := firebase_client.NewFirebaseClient()
 	if err != nil {
 		log.Fatal("Could not start firebase client")
@@ -110,8 +100,8 @@ func firebaseWorker() {
 		select {
 		// increment the invocation count and add it to the list of
 		// countries that should be updated
-		case code := <-invocateChannel:
-			updates.InvocationCount[code] = invocationCount[code]
+		case countryCode := <-invocateChannel:
+			updates.InvocationCount[countryCode] = invocationCount[countryCode]
 			updates.Ready = true
 
 		case action := <-registrationChannel:
@@ -128,4 +118,40 @@ func firebaseWorker() {
 
 		}
 	}
+}
+
+func registerWebhook(w http.ResponseWriter, r *http.Request) {
+	var data firebase_client.InvocationRegistration
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		fmt.Println("Error during decoding: " + err.Error())
+		return
+	}
+
+	if data.Calls < 1 {
+		http.Error(w, "Number of calls must be 1 or higher", http.StatusBadRequest)
+	}
+
+	if !strings.HasPrefix(data.URL, "http://") && !strings.HasPrefix(data.URL, "https://") {
+		http.Error(w, "URL must be prefixed by http:// or https://", http.StatusBadRequest)
+	}
+
+	if _, ok := invocationCount[data.Country]; !ok {
+		http.Error(w, "Country not recognized", http.StatusBadRequest)
+	}
+
+	data.WebhookID = generateWebhookID()
+	newEntry := firebase_client.RegistrationAction{
+		Add:          true,
+		Registration: data,
+	}
+	registrations[data.WebhookID] = data
+	registrationChannel <- newEntry
+
+	for key, val := range registrations {
+		fmt.Println(key, val)
+	}
+
+	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID})
 }
