@@ -26,21 +26,26 @@ func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.Respons
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
+
+			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
+				println("got from cache!!!!")
+				httpRespondJSON(w, cache, energyData)
+				return
+			}
+
 			segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
 			neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
 
 			switch len(segments) {
 			case 0:
-				httpRespondJSON(w, energyData.GetLatest("", false), energyData)
+				httpCacheAndRespondJSON(w, r.URL, energyData.GetLatest("", false), energyData)
 			case 1:
 				returnData := energyData.GetLatest(segments[0], neighbours == "true")
 				switch len(returnData) {
 				case 0:
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
-				case 1:
-					httpRespondJSON(w, returnData[0], energyData)
 				default:
-					httpRespondJSON(w, returnData, energyData)
+					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
 				}
 			default:
 				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
@@ -56,6 +61,12 @@ func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.Respons
 		switch r.Method {
 		case http.MethodGet:
 
+			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
+				println("got from cache!!!!")
+				httpRespondJSON(w, cache, energyData)
+				return
+			}
+
 			segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
 			begin, _ := utils.GetQueryInt(r.URL, "begin")
 			end, _ := utils.GetQueryInt(r.URL, "end")
@@ -63,11 +74,11 @@ func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.Respons
 
 			switch len(segments) {
 			case 0:
-				httpRespondJSON(w, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
+				httpCacheAndRespondJSON(w, r.URL, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
 			case 1:
 				returnData := energyData.GetHistoric(segments[0], begin, end, sort == "true")
 				if len(returnData) > 0 {
-					httpRespondJSON(w, returnData, energyData)
+					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
 				} else {
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 				}

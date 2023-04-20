@@ -1,5 +1,7 @@
 package firebase_client
 
+import "assignment2/internal/datastore"
+
 type InvocationRegistration struct {
 	WebhookID string `json:"webhook_id"`
 	URL       string `json:"url"`
@@ -16,7 +18,7 @@ type BundledUpdate struct {
 	Ready           bool
 	InvocationCount map[string]int64
 	Registrations   map[string]RegistrationAction
-	Cache           map[string]string
+	Cache           map[string]datastore.YearRecordList
 }
 
 type RegistrationAction struct {

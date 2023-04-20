@@ -7,6 +7,7 @@ import (
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -109,14 +110,15 @@ func (client *FirebaseClient) getAllDocuments(collection string) ([]*firestore.D
 }
 
 // SetRenewablesCache stores a YearRecordList in the renewables cache collection using the given URL as the document identifier.
-func (client *FirebaseClient) SetRenewablesCache(url string, list *datastore.YearRecordList) {
+func (client *FirebaseClient) SetRenewablesCache(url string, list datastore.YearRecordList) {
+	url = strings.ReplaceAll(url, "/", "_")
 	// e.g. SetRenewablesCache("/current/nor?neighbours=true", *data)
 	// Access the renewables cache collection, with the specified url, if not exist, it will be created
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
 
 	// Set or update the document with the provided data as a RenewableDB containing the YearRecordList
 	_, err := docRef.Set(client.ctx, datastore.RenewableDB{
-		"yearRecords": *list,
+		"yearRecords": list,
 	})
 	// Log errors if they occur during the Set operation
 	if err != nil {
@@ -126,7 +128,7 @@ func (client *FirebaseClient) SetRenewablesCache(url string, list *datastore.Yea
 
 // GetRenewablesCache retrieves a cached YearRecordList and its creation time by URL.
 func (client *FirebaseClient) GetRenewablesCache(url string) (datastore.YearRecordList, time.Time, error) {
-	// e.g. GetRenewablesCache("/current/nor?neighbours=true")
+	url = strings.ReplaceAll(url, "/", "_")
 	// Access the renewables cache collection and get a reference to the document with the specified URL
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
 	// Retrieve the document
@@ -151,7 +153,6 @@ func (client *FirebaseClient) GetRenewablesCache(url string) (datastore.YearReco
 
 // DeleteRenewablesCache removes the specified document from the renewables cache collection using the provided URL.
 func (client *FirebaseClient) DeleteRenewablesCache(url string) {
-	// e.g. DeleteRenewablesCache("/current/nor?neighbours=true")
 	// Access the renewables cache collection and get a reference to the document with the specified URL
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
 	// Delete the document
@@ -164,7 +165,6 @@ func (client *FirebaseClient) DeleteRenewablesCache(url string) {
 
 // SetInvocationRegistration stores an InvocationRegistration in Firestore
 func (client *FirebaseClient) SetInvocationRegistration(registration InvocationRegistration) {
-	// e.g. SetInvocationRegistration(registration)
 	// Access the invocation_registrations collection, with the specified WebhookID, if not exist, it will be created
 	docRef := client.client.Collection(CollectionInvocationRegistrations).Doc(registration.WebhookID)
 	_, err := docRef.Set(client.ctx, registration) // Set or update the document with the provided data
@@ -193,16 +193,6 @@ func (client *FirebaseClient) GetAllInvocationRegistrations() map[string]Invocat
 	return result
 }
 
-//func (client *FirebaseClient) BulkWriteInvocationCounts(ccna3map map[string]int) {
-//	bulkWriter := client.client.BulkWriter(client.ctx)
-//	for ccna3, count := range ccna3map {
-//		docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
-//		bulkWriter.Set(docRef, map[string]interface{}{"count": count})
-//	}
-//	bulkWriter.End()
-//
-//}
-
 func (client *FirebaseClient) BulkWrite(updates *BundledUpdate) {
 	bulkWriter := client.client.BulkWriter(client.ctx)
 
@@ -223,11 +213,11 @@ func (client *FirebaseClient) BulkWrite(updates *BundledUpdate) {
 	}
 
 	// updating cache
-	//for ccna3, count := range updates.Cache {
-	//	docRef := client.client.Collection(CollectionInvocationCounts).Doc(ccna3)
-	//	bulkWriter.Set(docRef, map[string]interface{}{"count": count})
-	//}
+	for url, cache := range updates.Cache {
+		url = strings.ReplaceAll(url, "/", "_")
+		docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
+		bulkWriter.Set(docRef, map[string]interface{}{"yearRecords": cache})
+	}
 
 	bulkWriter.End()
-
 }

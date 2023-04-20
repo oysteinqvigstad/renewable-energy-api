@@ -4,12 +4,19 @@ import (
 	"assignment2/internal/datastore"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 )
 
-func TestEnergyDefaultHandler(t *testing.T) {
+func TestInitialConfig(t *testing.T) {
+	FirestoreEnabled = false
+	setRootProjectDir()
 	initializeDataStructures()
+}
+
+func TestEnergyDefaultHandler(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(DefaultHandler))
 	defer server.Close()
 	statusCode := HttpGetStatusCode(t, server.URL)
@@ -20,12 +27,11 @@ func TestEnergyDefaultHandler(t *testing.T) {
 
 // TestEnergyCurrentHandler tests the EnergyCurrentHandler function.
 func TestEnergyCurrentHandler(t *testing.T) {
-	initializeDataStructures()
-	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(&energyData)))
 	defer server.Close()
 
-	dataSingle := datastore.YearRecord{}
+	//dataSingle := datastore.YearRecord{}
 	dataList := datastore.YearRecordList{}
 
 	// Test 1: Get all current country data
@@ -33,16 +39,17 @@ func TestEnergyCurrentHandler(t *testing.T) {
 	if len(dataList) != 79 {
 		t.Fatal("expected 79 countries to be returned, got: ", len(dataList))
 	}
+
 	// Test 2: Get only norway
-	HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor", &dataSingle)
-	if dataSingle.Name != "Norway" {
+	HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor", &dataList)
+	if dataList[0].Name != "Norway" {
 		t.Fatal("Expected Norway to be returned")
 	}
-	if dataSingle.Year != "2021" {
-		t.Fatal("Expected 2021 got: ", dataSingle.Year)
+	if dataList[0].Year != "2021" {
+		t.Fatal("Expected 2021 got: ", dataList[0].Year)
 	}
-	if dataSingle.Percentage != 71.558365 {
-		t.Fatal("Expected 2021 got: ", dataSingle.Percentage)
+	if dataList[0].Percentage != 71.558365 {
+		t.Fatal("Expected 2021 got: ", dataList[0].Percentage)
 	}
 
 	// Test 3: Verify that the API returns more than one neighboring country for Norway when the 'neighbours' query parameter is set to 'true'.
@@ -69,8 +76,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyCurrentHandler
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
-	initializeDataStructures()
-	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	handler := EnergyCurrentHandler(&energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
@@ -93,14 +99,12 @@ func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 
 // TestEnergyHistoryHandler tests the EnergyHistoryHandler function.
 func TestEnergyHistoryHandler(t *testing.T) {
-	initializeDataStructures()
-	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(&energyData)))
 	defer server.Close()
 
 	//dataSingle := datastore.YearRecord{}
 	dataList := datastore.YearRecordList{}
-
 	//Test 1: Get the current countries renewable energy for a specific year: 2005
 	HttpGetAndDecode(t, server.URL+RenewablesHistoryPath+"nor?begin=2005&end=2005", &dataList)
 	if dataList[0].Percentage != 69.73603 {
@@ -119,7 +123,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 	}
 
 	// Test 4: if you don't specify an alpha code
-	HttpGetAndDecode(t, server.URL, &dataList)
+	HttpGetAndDecode(t, server.URL+RenewablesHistoryPath, &dataList)
 	if len(dataList) != 79 {
 		t.Fatal("Expected : 79, got: ", len(dataList))
 	}
@@ -153,8 +157,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyHistoryHandler
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
-	initializeDataStructures()
-	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
+	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	handler := EnergyHistoryHandler(&energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
@@ -182,4 +185,10 @@ func calculateAverage(dataList datastore.YearRecordList) float64 {
 	}
 	avg := sum / float64(len(dataList))
 	return avg
+}
+
+func setRootProjectDir() {
+	wd, _ := os.Getwd()
+	os.Chdir(filepath.Join(wd, "..", ".."))
+
 }
