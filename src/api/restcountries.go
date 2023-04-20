@@ -1,7 +1,7 @@
 package api
 
 import (
-	"assignment2/internal/client"
+	"assignment2/internal/web_client"
 )
 
 const (
@@ -11,15 +11,16 @@ const (
 	ENDPOINT_CCA  = "alpha"
 )
 
-type bordersResp struct {
-	Borders []string `json:"borders"`
+type country struct {
+	Borders []string          `json:"borders"`
+	Name    map[string]string `json:"name"`
 }
 
 // GetNeighbours takes a name string
 // and returns an array of CCA3 code strings
 func GetNeighbours(name string) ([]string, error) {
 	// Instantiate client
-	cl := client.NewClient()
+	cl := web_client.NewClient()
 	err := cl.SetURL(API_BASE, API_VERSION, ENDPOINT_NAME, name)
 	if err != nil {
 		return nil, err
@@ -30,7 +31,7 @@ func GetNeighbours(name string) ([]string, error) {
 	cl.AddQuery("fields", "borders")
 
 	// Perform get request
-	resp := []bordersResp{}
+	resp := []country{}
 	err = cl.GetAndDecode(&resp)
 	if err != nil {
 		return nil, err
@@ -43,7 +44,7 @@ func GetNeighbours(name string) ([]string, error) {
 // an array of cca3 codes for bordering countries.
 func GetNeighboursCca(cca string) ([]string, error) {
 	// Instantiate client
-	cl := client.NewClient()
+	cl := web_client.NewClient()
 	err := cl.SetURL(API_BASE, API_VERSION, ENDPOINT_CCA, cca)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func GetNeighboursCca(cca string) ([]string, error) {
 	cl.AddQuery("fields", "borders")
 
 	// Perform GET request
-	resp := bordersResp{}
+	resp := country{}
 	err = cl.GetAndDecode(&resp)
 
 	if err != nil {

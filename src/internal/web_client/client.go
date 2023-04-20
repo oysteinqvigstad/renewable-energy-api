@@ -1,4 +1,4 @@
-package client
+package web_client
 
 import (
 	"encoding/json"
@@ -90,6 +90,7 @@ func (client *Client) Do(method string, reader io.Reader) (*http.Response, error
 	if e != nil {
 		return nil, e
 	}
+	r.Header.Set("Content-Type", "application/json")
 
 	// instantiate client
 	c := &http.Client{}

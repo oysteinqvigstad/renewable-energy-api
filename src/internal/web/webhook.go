@@ -1,7 +1,10 @@
 package web
 
 import (
+	"assignment2/internal/datastore"
 	"assignment2/internal/firebase_client"
+	"assignment2/internal/web_client"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,24 +23,31 @@ var (
 	serviceStarted      bool
 )
 
-func StartWebhookService() {
+// InitializeWebhookService is a function that initializes the webhook service.
+// It prevents the service from being started multiple times, initiates data structures,
+// retrieves registrations from Firestore, and starts the firebaseWorker goroutine.
+func InitializeWebhookService() {
 	if serviceStarted == true {
 		log.Fatal("Webhook service cannot be started twice")
 	}
-	initiateDatastructures()
-	retrieveRegistrationsFromFirestore()
+	initializeDataStructures()
+	loadRegistrationsFromFirestore()
 	go firebaseWorker()
 
 }
 
-func initiateDatastructures() {
+// initializeDataStructures is a function that initializes the necessary data structures
+// for the webhook service, such as invocation count, registrations, and channels.
+func initializeDataStructures() {
 	invocationCount = make(map[string]int64)
 	registrations = make(map[string]firebase_client.InvocationRegistration)
 	invocateChannel = make(chan string)
 	registrationChannel = make(chan firebase_client.RegistrationAction)
 }
 
-func retrieveRegistrationsFromFirestore() {
+// loadRegistrationsFromFirestore is a function that retrieves the invocation counts
+// and registrations from Firestore using the Firebase client and populates the respective data structures.
+func loadRegistrationsFromFirestore() {
 	// initiate data structures
 	println("Downloading counters and registrations from firestore")
 	client, err := firebase_client.NewFirebaseClient()
@@ -48,27 +58,15 @@ func retrieveRegistrationsFromFirestore() {
 	registrations = client.GetAllInvocationRegistrations()
 }
 
-func Invocate(ccna3 []string) {
+// ProcessWebhookByCountry is a function that processes a list of country codes, increments their invocation count,
+// and triggers webhooks accordingly.
+func ProcessWebhookByCountry(ccna3 []string, db *datastore.RenewableDB) {
 	for _, code := range ccna3 {
+		// TODO: Add mutex lock or other mechanism
 		invocationCount[code]++
 		invocateChannel <- code
+		triggerWebhooksForCountry(code, invocationCount[code], db.GetName(code))
 	}
-	// TODO: write go routine for triggering webhook
-}
-
-func DelWebhookRegistration(webhookId string) bool {
-	if _, ok := registrations[webhookId]; ok {
-		delete(registrations, webhookId)
-		data := firebase_client.RegistrationAction{
-			Add: false,
-			Registration: firebase_client.InvocationRegistration{
-				WebhookID: webhookId,
-			},
-		}
-		registrationChannel <- data
-		return true
-	}
-	return false
 }
 
 // generateWebhookID is a function that generates a unique 13-character
@@ -167,7 +165,7 @@ func registerWebhook(w http.ResponseWriter, r *http.Request) {
 	registrations[data.WebhookID] = data
 	registrationChannel <- newEntry
 	w.WriteHeader(http.StatusCreated)
-	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID})
+	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID}, nil)
 }
 
 // validateRegistrationData is a function that takes an InvocationRegistration
@@ -175,7 +173,7 @@ func registerWebhook(w http.ResponseWriter, r *http.Request) {
 func validateRegistrationData(registration firebase_client.InvocationRegistration) error {
 	// Check if the number of calls is less than 1. If so, return an error.
 	if registration.Calls < 1 {
-		return errors.New("Number of calls must be 1 or higher")
+		return errors.New("number of calls must be 1 or higher")
 	}
 
 	// Check if the URL is properly formatted with http:// or https:// prefix.
@@ -187,31 +185,38 @@ func validateRegistrationData(registration firebase_client.InvocationRegistratio
 	// Check if the country is recognized (i.e., if it exists in the invocationCount map).
 	// If not, return an error.
 	if _, ok := invocationCount[registration.Country]; !ok {
-		return errors.New("Country not recognized")
+		return errors.New("country not recognized")
 	}
 
 	// If all checks pass, return nil, indicating no error occurred.
 	return nil
 }
 
-func viewAllWebhooks(w http.ResponseWriter) {
+// listAllWebhooks is a function that retrieves all registered webhooks
+// and sends them as a JSON response to the client.
+func listAllWebhooks(w http.ResponseWriter) {
 	registrationList := make([]firebase_client.InvocationRegistration, 0, len(registrations))
 	for _, registration := range registrations {
 		registrationList = append(registrationList, registration)
 	}
-	httpRespondJSON(w, registrationList)
+	httpRespondJSON(w, registrationList, nil)
 }
 
-func viewWebhookByID(w http.ResponseWriter, webhookID string) {
+// listAllWebhooksByID is a function that retrieves a registered webhook by its ID
+// and sends it as a JSON response to the client if found, otherwise it sends an error.
+func listAllWebhooksByID(w http.ResponseWriter, webhookID string) {
 	if reg, ok := registrations[webhookID]; ok {
 		println("hello")
-		httpRespondJSON(w, reg)
+		httpRespondJSON(w, reg, nil)
 		return
 	}
 	http.Error(w, "Could not find the webhook ID: "+webhookID, http.StatusBadRequest)
 }
 
-func deleteWebhook(w http.ResponseWriter, webhookID string) {
+// RemoveWebhookByID is a function that removes a webhook registration by its ID.
+// If the webhook is found and deleted successfully, it sends a "No Content" status,
+// otherwise, it sends an error.
+func RemoveWebhookByID(w http.ResponseWriter, webhookID string) {
 	if record, ok := registrations[webhookID]; ok {
 		delete(registrations, webhookID)
 		update := firebase_client.RegistrationAction{Add: false, Registration: record}
@@ -219,6 +224,43 @@ func deleteWebhook(w http.ResponseWriter, webhookID string) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	http.Error(w, "Could not find the webhookID: "+webhookID, http.StatusBadRequest)
+}
+
+// triggerWebhooksForCountry is a function that iterates through all registered webhooks
+// and triggers them if the specified country code matches and the call count
+// reaches the specified threshold.
+//
+// TODO: Refactor to use a worker thread!
+// This is not the best way to handle webhooks, as it needs to check
+// every registration every time a country code is invoked.
+func triggerWebhooksForCountry(countrycode string, count int64, name string) {
+	for _, reg := range registrations {
+		if reg.Country == countrycode {
+			if count > 0 && count%reg.Calls == 0 {
+				fmt.Println(reg)
+				go postToWebhook(reg.URL, map[string]interface{}{
+					"webhook_id": reg.WebhookID,
+					"country":    name,
+					"calls":      count,
+				})
+			}
+		}
+	}
+}
+
+// postToWebhook is a function that sends a POST request to the specified webhook URL
+// with the provided registration data as the request body.
+func postToWebhook(url string, registration map[string]interface{}) {
+	client := web_client.NewClient()
+	err := client.SetURL(url)
+	if err != nil {
+		return
+	}
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(registration)
+	if err != nil {
+		log.Println("Could not encode to json, ", err.Error())
+	}
+	_, _ = client.Post(&buf)
 }

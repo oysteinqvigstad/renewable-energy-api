@@ -236,3 +236,12 @@ func (list YearRecordList) Invocate() []string {
 	}
 	return result
 }
+
+func (db *RenewableDB) GetName(countryCode string) string {
+	if records, ok := (*db)[countryCode]; ok {
+		if len(records) > 0 {
+			return records[0].Name
+		}
+	}
+	return countryCode
+}

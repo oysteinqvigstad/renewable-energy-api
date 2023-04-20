@@ -16,8 +16,8 @@ func main() {
 		log.Println("$PORT has not been set. Default: 8080")
 		port = "8080" // TODO: use const
 	}
-	web.StartWebhookService()
+	web.InitializeWebhookService()
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	utils.ResetUptime()
-	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, energyData)))
+	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, &energyData)))
 }

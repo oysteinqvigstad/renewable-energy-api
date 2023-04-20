@@ -9,14 +9,14 @@ import (
 )
 
 // httpRespondJSON takes any type of data and attempts to encode it as JSON to the response writer
-func httpRespondJSON(w http.ResponseWriter, data any) {
+func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB) {
 	w.Header().Set("content-type", "application/json")
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(data)
 	if err != nil {
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
 	}
-	go invocate(data)
+	go invocate(data, db)
 }
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
@@ -46,7 +46,7 @@ func HttpGetStatusCode(t *testing.T, url string) int {
 	return res.StatusCode
 }
 
-func invocate(data any) {
+func invocate(data any, db *datastore.RenewableDB) {
 	var invocationList []string
 	switch data.(type) {
 	case datastore.YearRecordList:
@@ -57,6 +57,7 @@ func invocate(data any) {
 
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-		Invocate(invocationList)
+
+		ProcessWebhookByCountry(invocationList, db)
 	}
 }

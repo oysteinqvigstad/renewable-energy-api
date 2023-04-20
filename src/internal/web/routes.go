@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func SetupRoutes(port string, energyData datastore.RenewableDB) *http.ServeMux {
+func SetupRoutes(port string, energyData *datastore.RenewableDB) *http.ServeMux {
 	mux := http.ServeMux{}
 
 	// TODO: create const

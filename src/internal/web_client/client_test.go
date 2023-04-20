@@ -1,4 +1,4 @@
-package client
+package web_client
 
 import (
 	"net/url"

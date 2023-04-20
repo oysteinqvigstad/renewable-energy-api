@@ -9,6 +9,7 @@ import (
 )
 
 func TestEnergyDefaultHandler(t *testing.T) {
+	initializeDataStructures()
 	server := httptest.NewServer(http.HandlerFunc(DefaultHandler))
 	defer server.Close()
 	statusCode := HttpGetStatusCode(t, server.URL)
@@ -19,8 +20,9 @@ func TestEnergyDefaultHandler(t *testing.T) {
 
 // TestEnergyCurrentHandler tests the EnergyCurrentHandler function.
 func TestEnergyCurrentHandler(t *testing.T) {
+	initializeDataStructures()
 	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
-	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(energyData)))
+	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(&energyData)))
 	defer server.Close()
 
 	dataSingle := datastore.YearRecord{}
@@ -67,8 +69,9 @@ func TestEnergyCurrentHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyCurrentHandler
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
+	initializeDataStructures()
 	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
-	handler := EnergyCurrentHandler(energyData)
+	handler := EnergyCurrentHandler(&energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 	// Test: Send a POST request to the EnergyHistoryHandler
@@ -90,8 +93,9 @@ func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 
 // TestEnergyHistoryHandler tests the EnergyHistoryHandler function.
 func TestEnergyHistoryHandler(t *testing.T) {
+	initializeDataStructures()
 	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
-	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(energyData)))
+	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(&energyData)))
 	defer server.Close()
 
 	//dataSingle := datastore.YearRecord{}
@@ -149,8 +153,9 @@ func TestEnergyHistoryHandler(t *testing.T) {
 
 // Tests the invalid Method for EnergyHistoryHandler
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
+	initializeDataStructures()
 	energyData := datastore.ParseCSV(path.Join("..", "..", "res", datastore.CSVFilePath))
-	handler := EnergyHistoryHandler(energyData)
+	handler := EnergyHistoryHandler(&energyData)
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 	// Test: Send a POST request to the EnergyHistoryHandler
