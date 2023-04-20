@@ -20,6 +20,7 @@ var (
 	registrations       map[string]firebase_client.InvocationRegistration
 	invocateChannel     chan string
 	registrationChannel chan firebase_client.RegistrationAction
+	cacheChannel        chan map[string]datastore.YearRecordList
 	serviceStarted      bool
 )
 
@@ -43,6 +44,7 @@ func initializeDataStructures() {
 	registrations = make(map[string]firebase_client.InvocationRegistration)
 	invocateChannel = make(chan string)
 	registrationChannel = make(chan firebase_client.RegistrationAction)
+	cacheChannel = make(chan map[string]datastore.YearRecordList)
 }
 
 // loadRegistrationsFromFirestore is a function that retrieves the invocation counts
@@ -126,6 +128,12 @@ func firebaseWorker() {
 			updates.Registrations[action.Registration.WebhookID] = action
 			updates.Ready = true
 
+		case cache := <-cacheChannel:
+			for key, value := range cache {
+				updates.Cache[key] = value
+			}
+			updates.Ready = true
+
 		// When the ticker triggers, check if there are updates to send and
 		// send them to Firebase in bulk if there are. Reset the updates
 		// and Ready flag afterward.
@@ -206,7 +214,6 @@ func listAllWebhooks(w http.ResponseWriter) {
 // and sends it as a JSON response to the client if found, otherwise it sends an error.
 func listAllWebhooksByID(w http.ResponseWriter, webhookID string) {
 	if reg, ok := registrations[webhookID]; ok {
-		println("hello")
 		httpRespondJSON(w, reg, nil)
 		return
 	}
@@ -238,7 +245,6 @@ func triggerWebhooksForCountry(countrycode string, count int64, name string) {
 	for _, reg := range registrations {
 		if reg.Country == countrycode {
 			if count > 0 && count%reg.Calls == 0 {
-				fmt.Println(reg)
 				go postToWebhook(reg.URL, map[string]interface{}{
 					"webhook_id": reg.WebhookID,
 					"country":    name,

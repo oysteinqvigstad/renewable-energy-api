@@ -2,8 +2,11 @@ package web
 
 import (
 	"assignment2/internal/datastore"
+	"assignment2/internal/firebase_client"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -17,6 +20,14 @@ func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB)
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
 	}
 	go invocate(data, db)
+}
+
+func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
+	// TODO: refactor to use interface{} ?
+	value := make(map[string]datastore.YearRecordList)
+	value[url.String()] = data
+	cacheChannel <- value
+	httpRespondJSON(w, data, db)
 }
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
@@ -57,7 +68,17 @@ func invocate(data any, db *datastore.RenewableDB) {
 
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-
 		ProcessWebhookByCountry(invocationList, db)
 	}
+}
+
+func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
+	println("attempting to get from cache")
+	client, err := firebase_client.NewFirebaseClient()
+	// TODO: Handle timestamp?
+	data, _, err := client.GetRenewablesCache(url.String())
+	if err != nil {
+		return datastore.YearRecordList{}, errors.New("cache not found")
+	}
+	return data, nil
 }
