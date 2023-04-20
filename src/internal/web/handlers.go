@@ -93,15 +93,20 @@ func NotificationHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{?webhook_id}", http.StatusBadRequest)
 		}
-
 	case http.MethodPost:
-		if len(segments) == 0 {
+		switch len(segments) {
+		case 0:
 			registerWebhook(w, r)
-		} else {
+		default:
 			http.Error(w, "Expected POST in JSON on "+NotificationsPath, http.StatusBadRequest)
 		}
 	case http.MethodDelete:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
+		switch len(segments) {
+		case 1:
+			deleteWebhook(w, segments[0])
+		default:
+			http.Error(w, "Usage: "+NotificationsPath+"{id}", http.StatusBadRequest)
+		}
 	default:
 		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}

@@ -166,8 +166,7 @@ func registerWebhook(w http.ResponseWriter, r *http.Request) {
 	newEntry := firebase_client.RegistrationAction{Add: true, Registration: data}
 	registrations[data.WebhookID] = data
 	registrationChannel <- newEntry
-
-	// Respond 200 OK to the client
+	w.WriteHeader(http.StatusCreated)
 	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID})
 }
 
@@ -210,4 +209,16 @@ func viewWebhookByID(w http.ResponseWriter, webhookID string) {
 		return
 	}
 	http.Error(w, "Could not find the webhook ID: "+webhookID, http.StatusBadRequest)
+}
+
+func deleteWebhook(w http.ResponseWriter, webhookID string) {
+	if record, ok := registrations[webhookID]; ok {
+		delete(registrations, webhookID)
+		update := firebase_client.RegistrationAction{Add: false, Registration: record}
+		registrationChannel <- update
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	http.Error(w, "Could not find the webhookID: "+webhookID, http.StatusBadRequest)
 }
