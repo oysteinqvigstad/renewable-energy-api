@@ -39,7 +39,6 @@ func HttpGetAndDecode(t *testing.T, url string, data any) {
 	if err != nil {
 		t.Fatal("Get request to URL failed:", err.Error())
 	}
-
 	err = json.NewDecoder(res.Body).Decode(&data)
 	if err != nil {
 		t.Fatal("Error during decoding", err.Error())
@@ -73,7 +72,7 @@ func invocate(data any, db *datastore.RenewableDB) {
 }
 
 func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	println("attempting to get from cache")
+	println("attempting to get from cache ", url.String())
 	client, err := firebase_client.NewFirebaseClient()
 	// TODO: Handle timestamp?
 	data, _, err := client.GetRenewablesCache(url.String())

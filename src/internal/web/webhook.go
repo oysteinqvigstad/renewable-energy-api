@@ -42,9 +42,9 @@ func InitializeWebhookService() {
 func initializeDataStructures() {
 	invocationCount = make(map[string]int64)
 	registrations = make(map[string]firebase_client.InvocationRegistration)
-	invocateChannel = make(chan string)
-	registrationChannel = make(chan firebase_client.RegistrationAction)
-	cacheChannel = make(chan map[string]datastore.YearRecordList)
+	invocateChannel = make(chan string, 1000)
+	registrationChannel = make(chan firebase_client.RegistrationAction, 10)
+	cacheChannel = make(chan map[string]datastore.YearRecordList, 100)
 }
 
 // loadRegistrationsFromFirestore is a function that retrieves the invocation counts
