@@ -31,6 +31,7 @@ func InitializeWebhookService() {
 	if serviceStarted == true {
 		log.Fatal("Webhook service cannot be started twice")
 	}
+	FirestoreEnabled = true
 	initializeDataStructures()
 	loadRegistrationsFromFirestore()
 	go firebaseWorker()

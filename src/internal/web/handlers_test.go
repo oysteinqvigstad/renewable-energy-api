@@ -1,7 +1,6 @@
 package web
 
 import (
-	"assignment2/internal/config"
 	"assignment2/internal/datastore"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestInitialConfig(t *testing.T) {
-	config.EnableFirestore = false
+	FirestoreEnabled = false
 	setRootProjectDir()
 	initializeDataStructures()
 }

@@ -1,7 +1,6 @@
 package web
 
 import (
-	"assignment2/internal/config"
 	"assignment2/internal/datastore"
 	"assignment2/internal/firebase_client"
 	"encoding/json"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"testing"
 )
+
+var FirestoreEnabled bool
 
 // httpRespondJSON takes any type of data and attempts to encode it as JSON to the response writer
 func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB) {
@@ -27,7 +28,7 @@ func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore
 	// TODO: refactor to use interface{} ?
 	value := make(map[string]datastore.YearRecordList)
 	value[url.String()] = data
-	if config.EnableFirestore {
+	if FirestoreEnabled {
 		cacheChannel <- value
 	}
 	httpRespondJSON(w, data, db)
@@ -75,7 +76,7 @@ func invocate(data any, db *datastore.RenewableDB) {
 }
 
 func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	if config.EnableFirestore {
+	if FirestoreEnabled {
 		println("attempting to get from cache ", url.String())
 		client, err := firebase_client.NewFirebaseClient()
 		// TODO: Handle timestamp?

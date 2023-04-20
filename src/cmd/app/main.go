@@ -1,7 +1,6 @@
 package main
 
 import (
-	"assignment2/internal/config"
 	"assignment2/internal/datastore"
 	"assignment2/internal/utils"
 	"assignment2/internal/web"
@@ -12,8 +11,6 @@ import (
 )
 
 func main() {
-	config.EnableFirestore = true
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		log.Println("$PORT has not been set. Default: 8080")
