@@ -54,8 +54,9 @@ func invocate(data any) {
 	case datastore.YearRecord:
 		invocationList = datastore.YearRecordList{data.(datastore.YearRecord)}.Invocate()
 	}
+
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-		// TODO: Write logic for what should happen on each invocation. Should we store the count on firebase_client?
+		Invocate(invocationList)
 	}
 }
