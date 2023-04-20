@@ -81,11 +81,25 @@ func EnergyHistoryHandler(energyData datastore.RenewableDB) func(w http.Response
 }
 
 func NotificationHandler(w http.ResponseWriter, r *http.Request) {
+	segments := utils.GetSegments(r.URL, NotificationsPath)
+
 	switch r.Method {
 	case http.MethodGet:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
+		switch len(segments) {
+		case 0:
+			viewAllWebhooks(w)
+		case 1:
+			viewWebhookByID(w, segments[0])
+		default:
+			http.Error(w, "Usage: "+NotificationsPath+"{?webhook_id}", http.StatusBadRequest)
+		}
+
 	case http.MethodPost:
-		registerWebhook(w, r)
+		if len(segments) == 0 {
+			registerWebhook(w, r)
+		} else {
+			http.Error(w, "Expected POST in JSON on "+NotificationsPath, http.StatusBadRequest)
+		}
 	case http.MethodDelete:
 		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
 	default:

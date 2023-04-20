@@ -157,6 +157,7 @@ func registerWebhook(w http.ResponseWriter, r *http.Request) {
 	// validating the JSON input
 	if err := validateRegistrationData(data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// adding registration to data structure and notifying firestore that the registration
@@ -192,4 +193,21 @@ func validateRegistrationData(registration firebase_client.InvocationRegistratio
 
 	// If all checks pass, return nil, indicating no error occurred.
 	return nil
+}
+
+func viewAllWebhooks(w http.ResponseWriter) {
+	registrationList := make([]firebase_client.InvocationRegistration, 0, len(registrations))
+	for _, registration := range registrations {
+		registrationList = append(registrationList, registration)
+	}
+	httpRespondJSON(w, registrationList)
+}
+
+func viewWebhookByID(w http.ResponseWriter, webhookID string) {
+	if reg, ok := registrations[webhookID]; ok {
+		println("hello")
+		httpRespondJSON(w, reg)
+		return
+	}
+	http.Error(w, "Could not find the webhook ID: "+webhookID, http.StatusBadRequest)
 }
