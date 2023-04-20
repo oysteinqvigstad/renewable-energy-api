@@ -22,7 +22,7 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EnergyCurrentHandler(energyData datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -31,16 +31,16 @@ func EnergyCurrentHandler(energyData datastore.RenewableDB) func(w http.Response
 
 			switch len(segments) {
 			case 0:
-				httpRespondJSON(w, energyData.GetLatest("", false))
+				httpRespondJSON(w, energyData.GetLatest("", false), energyData)
 			case 1:
 				returnData := energyData.GetLatest(segments[0], neighbours == "true")
 				switch len(returnData) {
 				case 0:
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 				case 1:
-					httpRespondJSON(w, returnData[0])
+					httpRespondJSON(w, returnData[0], energyData)
 				default:
-					httpRespondJSON(w, returnData)
+					httpRespondJSON(w, returnData, energyData)
 				}
 			default:
 				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
@@ -51,7 +51,7 @@ func EnergyCurrentHandler(energyData datastore.RenewableDB) func(w http.Response
 	}
 }
 
-func EnergyHistoryHandler(energyData datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -63,11 +63,11 @@ func EnergyHistoryHandler(energyData datastore.RenewableDB) func(w http.Response
 
 			switch len(segments) {
 			case 0:
-				httpRespondJSON(w, energyData.GetHistoricAvg(begin, end, sort == "true"))
+				httpRespondJSON(w, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
 			case 1:
 				returnData := energyData.GetHistoric(segments[0], begin, end, sort == "true")
 				if len(returnData) > 0 {
-					httpRespondJSON(w, returnData)
+					httpRespondJSON(w, returnData, energyData)
 				} else {
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 				}
@@ -87,9 +87,9 @@ func NotificationHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		switch len(segments) {
 		case 0:
-			viewAllWebhooks(w)
+			listAllWebhooks(w)
 		case 1:
-			viewWebhookByID(w, segments[0])
+			listAllWebhooksByID(w, segments[0])
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{?webhook_id}", http.StatusBadRequest)
 		}
@@ -103,7 +103,7 @@ func NotificationHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		switch len(segments) {
 		case 1:
-			deleteWebhook(w, segments[0])
+			RemoveWebhookByID(w, segments[0])
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{id}", http.StatusBadRequest)
 		}
