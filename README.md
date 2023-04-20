@@ -69,7 +69,7 @@ We successfully deployed the final web service on our local OpenStack instance, 
 
 Throughout this project, we familiarized ourselves with various technologies introduced as part of the course, ensuring a smooth development process. We actively participated in or reviewed the lectures to understand these technologies.
 
-## Endpoints
+# Endpoints
 
 Our web service will have four resource root paths:
 
@@ -78,7 +78,7 @@ Our web service will have four resource root paths:
 - `/energy/v1/notifications/`
 - `/energy/v1/status/`
 
-### 1. Endpoint: Current percentage of renewables
+## 1. Endpoint: Current percentage of renewables
 
 This endpoint focuses on returning the latest percentages of renewables in the energy mix.
 
@@ -335,4 +335,39 @@ The initial endpoint focuses on returning historical percentages of renewables i
     "percentage": 64.23876
   }
 ]
+```
+## 3. Endpoint: Notification 
+
+**TODO**
+
+## 4. Endpoint: Status 
+
+The Status Endpoint provides an overview of the health and status of various components within the service. It allows users to monitor the connectivity and functionality of external APIs, the Notification Database, and other aspects of the service.
+
+### Request
+
+`Method: GET
+Path: energy/v1/status/`
+
+### Response
+
+The response contains the following information:
+
+- **`countries_api`**: The HTTP status code for the *REST Countries API*, indicating the current state of the connection with the external API.
+- **`notification_db`**: The HTTP status code for the *Notification DB* in Firebase, reflecting the status of the connection with the database used for storing webhook registrations.
+- **`webhooks`**: The total number of registered webhooks in the service, giving users an idea of the current usage.
+- **`version`**: The current version of the service (e.g., "v1"), useful for tracking updates and changes to the service.
+- **`uptime`**: The time in seconds since the last service restart, providing insight into the stability and performance of the service.
+
+**Example response:**
+
+```
+{
+   "countries_api": "<http status code for *REST Countries API*>",
+   "notification_db": "<http status code for *Notification DB* in Firebase>",
+   ...
+   "webhooks": <number of registered webhooks>,
+   "version": "v1",
+   "uptime": <time in seconds from the last service restart>
+}
 ```
