@@ -85,81 +85,254 @@ This endpoint focuses on returning the latest percentages of renewables in the e
     Method: GET
     Path: /energy/v1/renewables/current/{country?}
 
-`{country?}` refers to an optional country 3-letter code.
+`{country?}`refers to an optional country 3-letter code.
 
-`{?neighbours=bool?}` refers to an optional parameter indicating whether neighbouring countries' values should be shown.
+`{?neighbours=bool?}`refers to an optional parameter indicating whether neighbouring countries' values should be shown.
 
 ### Request and response examples
 
 **Request:**
 
-    /energy/v1/renewables/current/nor
+`/energy/v1/renewables/current/nor`
 
 **Response**
 
-    {
+```
+{
     "name": "Norway",
     "isoCode": "NOR",
     "year": "2021",
     "percentage": 71.558365
-    }
+}
+```
 **Request:**
 
-    /energy/v1/renewables/current/nor?neighbours=true
+`/energy/v1/renewables/current/nor?neighbours=true`
 
 **Response**
-
-    [
+```
+[
     {
-    "name": "Norway",
-    "isoCode": "NOR",
-    "year": "2021",
-    "percentage": 71.558365
+        "name": "Norway",
+        "isoCode": "NOR",
+        "year": "2021",
+        "percentage": 71.558365
     },
     {
-    "name": "Finland",
-    "isoCode": "FIN",
-    "year": "2021",
-    "percentage": 34.61129
+        "name": "Finland",
+        "isoCode": "FIN",
+        "year": "2021",
+        "percentage": 34.61129
     },
     {
-    "name": "Russia",
-    "isoCode": "RUS",
-    "year": "2021",
-    "percentage": 6.6202893
+        "name": "Russia",
+        "isoCode": "RUS",
+        "year": "2021",
+        "percentage": 6.6202893
     },
     {
-    "name": "Sweden",
-    "isoCode": "SWE",
-    "year": "2021",
-    "percentage": 50.924007
+        "name": "Sweden",
+        "isoCode": "SWE",
+        "year": "2021",
+        "percentage": 50.924007
     }
-    ]
+]
+```
 
 **Request:**(without country code):
 
-    /energy/v1/renewables/current/
+`/energy/v1/renewables/current/`
 
 **Response (**returns all countries**)**
-
-    [
+```
+[
     {
-    "name": "Algeria",
-    "isoCode": "DZA",
-    "year": "2021",
-    "percentage": 0.26136735
+        "name": "Algeria",
+        "isoCode": "DZA",
+        "year": "2021",
+        "percentage": 0.26136735
     },
     {
-    "name": "Argentina",
-    "isoCode": "ARG",
-    "year": "2021",
-    "percentage": 11.329249
+        "name": "Argentina",
+        "isoCode": "ARG",
+        "year": "2021",
+        "percentage": 11.329249
     },
     {
-    "name": "Australia",
-    "isoCode": "AUS",
-    "year": "2021",
-    "percentage": 12.933532
+        "name": "Australia",
+        "isoCode": "AUS",
+        "year": "2021",
+        "percentage": 12.933532
     },
     ...
-    ]
+]
+```
+## 2. Endpoint: Historical percentages of renewables
+
+The initial endpoint focuses on returning historical percentages of renewables in the energy mix, including individual levels, as well as mean values for individual or selections of countries.
+
+    Method: GET
+    Path: /energy/v1/renewables/history/{country?}{?begin=year&end=year?}
+
+`{country?}` refers to an optional country 3-letter code.
+
+`{?begin=year&end=year?}` data will be displayed only for the specified range of years between the 'begin' and 'end' values.
+
+### Request and response examples
+
+**Request:**
+
+`/energy/v1/renewables/history/nor`
+
+**Response**
+
+```
+[
+    {
+        "name": "Norway",
+        "isoCode": "NOR",
+        "year": "1965",
+        "percentage": 67.87996
+    },
+    {
+        "name": "Norway",
+        "isoCode": "NOR",
+        "year": "1966",
+        "percentage": 65.3991
+    },
+    ...
+]
+```
+
+**Request**(without country code)**:**
+
+`/energy/v1/renewables/history/`
+
+**Response**(returns mean percentages for all countries):
+```
+[
+    {
+        "name": "United Arab Emirates",
+        "isoCode": "ARE",
+        "percentage": 0.0444305504
+    },
+    {
+        "name": "Argentina",
+        "isoCode": "ARG",
+        "percentage": 9.131337212280702
+    },
+    {
+        "name": "Australia",
+        "isoCode": "AUS",
+        "percentage": 5.3000481596491245
+    },
+    ...
+]
+```
+
+**Request:**
+
+`/energy/v1/renewables/history/nor?begin=1960&end=1970`
+
+**Response**
+
+```
+[
+    {
+        "name": "Norway",
+        "isoCode": "NOR",
+        "year": "1965",
+        "percentage": 67.87996
+    },
+    {
+        "name": "Norway",
+        "isoCode": "NOR",
+        "year": "1966",
+        "percentage": 65.3991
+    },
+    ...
+]
+```
+
+### **Advanced Tasks:**
+
+**Request:**
+
+`/energy/v1/renewables/history/nor?end=1967`
+
+**Response**
+
+```
+[
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "1965",
+    "percentage": 67.87996
+  },
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "1966",
+    "percentage": 65.3991
+  },
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "1967",
+    "percentage": 66.591644
+  }
+]
+```
+
+**Request:**
+
+`/energy/v1/renewables/history/nor?begin=2020`
+
+**Response**
+
+```
+[
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "2020",
+    "percentage": 70.96306
+  },
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "2021",
+    "percentage": 71.558365
+  }
+]
+```
+
+**Request:**
+
+`/energy/v1/renewables/history/nor?begin=2004&end=2006&sortByValue=true`
+
+**Response**
+
+```
+[
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "2005",
+    "percentage": 69.73603
+  },
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "2006",
+    "percentage": 66.73525
+  },
+  {
+    "name": "Norway",
+    "isoCode": "NOR",
+    "year": "2004",
+    "percentage": 64.23876
+  }
+]
+```
