@@ -1,6 +1,7 @@
 package web
 
 import (
+	"assignment2/internal/config"
 	"assignment2/internal/datastore"
 	"assignment2/internal/firebase_client"
 	"encoding/json"
@@ -26,7 +27,9 @@ func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore
 	// TODO: refactor to use interface{} ?
 	value := make(map[string]datastore.YearRecordList)
 	value[url.String()] = data
-	cacheChannel <- value
+	if config.EnableFirestore {
+		cacheChannel <- value
+	}
 	httpRespondJSON(w, data, db)
 }
 
@@ -72,12 +75,15 @@ func invocate(data any, db *datastore.RenewableDB) {
 }
 
 func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	println("attempting to get from cache ", url.String())
-	client, err := firebase_client.NewFirebaseClient()
-	// TODO: Handle timestamp?
-	data, _, err := client.GetRenewablesCache(url.String())
-	if err != nil {
-		return datastore.YearRecordList{}, errors.New("cache not found")
+	if config.EnableFirestore {
+		println("attempting to get from cache ", url.String())
+		client, err := firebase_client.NewFirebaseClient()
+		// TODO: Handle timestamp?
+		data, _, err := client.GetRenewablesCache(url.String())
+		if err != nil {
+			return data, errors.New("cache not found")
+		}
+		return data, nil
 	}
-	return data, nil
+	return datastore.YearRecordList{}, errors.New("firebase disabled")
 }

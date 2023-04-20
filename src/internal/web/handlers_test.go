@@ -1,6 +1,7 @@
 package web
 
 import (
+	"assignment2/internal/config"
 	"assignment2/internal/datastore"
 	"net/http"
 	"net/http/httptest"
@@ -10,9 +11,13 @@ import (
 	"testing"
 )
 
-func TestEnergyDefaultHandler(t *testing.T) {
+func TestInitialConfig(t *testing.T) {
+	config.EnableFirestore = false
 	setRootProjectDir()
 	initializeDataStructures()
+}
+
+func TestEnergyDefaultHandler(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(DefaultHandler))
 	defer server.Close()
 	statusCode := HttpGetStatusCode(t, server.URL)
