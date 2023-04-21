@@ -139,7 +139,7 @@ func (s *State) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 
 // StatusHandler serves the status endpoint, providing availability info for dependent services,
 // the number of registered webhooks, API version, and uptime.
-func StatusHandler(w http.ResponseWriter, r *http.Request) {
+func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	// Get URL segments after the StatusPath
 	segments := utils.GetSegments(r.URL, StatusPath)
 	// Calculate the uptime in seconds since the last service restart
@@ -164,25 +164,29 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Create a Firebase client to get registered webhooks
-			client, err := firebase_client.NewFirebaseClient()
-			defer client.Close()
 			var notificationDBStatus int
-			if err != nil {
-				// Handle any error from the Firebase client
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				notificationDBStatus = http.StatusInternalServerError
-				return
-			} else {
-				// Set the Notification DB status to OK if no error
-				notificationDBStatus = http.StatusOK
+			switch s.Mode.(type) {
+			case WithFirestore:
+				client, err := firebase_client.NewFirebaseClient()
+				defer client.Close()
+				if err != nil {
+					// Handle any error from the Firebase client
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					notificationDBStatus = http.StatusInternalServerError
+					return
+				} else {
+					// Set the Notification DB status to OK if no error
+					notificationDBStatus = http.StatusOK
+				}
+			case WithoutFirestore:
+				notificationDBStatus = http.StatusServiceUnavailable
 			}
-			// Get the invocation count for all registered webhooks
-			invocationCount := client.GetAllInvocationCounts()
+
 			// Create a struct to hold the API status information
 			allAPI := APIStatus{
 				Countriesapi:    resp.StatusCode,      // HTTP status code for *REST Countries API*
 				Notification_db: notificationDBStatus, // HTTP status code for *Notification DB* in Firebase
-				Webhooks:        len(invocationCount), // Number of registered webhooks
+				Webhooks:        len(s.Registrations), // Number of registered webhooks
 				Version:         api.API_VERSION,      // API version
 				Uptime:          uptime,               // Uptime in seconds since the last service restart
 			}
