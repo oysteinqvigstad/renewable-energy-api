@@ -24,9 +24,9 @@ type FirebaseClient struct {
 // NewFirebaseClient initializes and returns a new FirebaseClient by connecting to Firebase using the secret key.
 func NewFirebaseClient() (*FirebaseClient, error) {
 	/* Firebase initialisation  -> means setting up the connection to Firebase */
-	ctx := context.Background()                                    // Create a basic empty box for tasks
-	secret_key_path := option.WithCredentialsFile(PathToSecretKey) // Tell the program where to find the secret key for Firebase
-	app, err := firebase.NewApp(ctx, nil, secret_key_path)         // Connect to Firebase using the secret key
+	ctx := context.Background()                                  // Create a basic empty box for tasks
+	secretKeyPath := option.WithCredentialsFile(PathToSecretKey) // Tell the program where to find the secret key for Firebase
+	app, err := firebase.NewApp(ctx, nil, secretKeyPath)         // Connect to Firebase using the secret key
 
 	if err != nil { // If there's an error, stop the program and show the error
 		log.Fatalf("Error initializing Firebase app: %v", err)
@@ -200,16 +200,25 @@ func (client *FirebaseClient) BulkWrite(updates *types.BundledUpdate) {
 	// updating invocation counts
 	for countryCode, count := range updates.InvocationCount {
 		docRef := client.client.Collection(CollectionInvocationCounts).Doc(countryCode)
-		bulkWriter.Set(docRef, map[string]interface{}{"count": count})
+		_, err := bulkWriter.Set(docRef, map[string]interface{}{"count": count})
+		if err != nil {
+			log.Println("could not add job to bulk-writer ", err.Error())
+		}
 	}
 
 	// updating registrations
 	for _, reg := range updates.Registrations {
 		docRef := client.client.Collection(CollectionInvocationRegistrations).Doc(reg.Registration.WebhookID)
 		if reg.Add {
-			bulkWriter.Set(docRef, reg.Registration)
+			_, err := bulkWriter.Set(docRef, reg.Registration)
+			if err != nil {
+				log.Println("could not add job to bulk-writer ", err.Error())
+			}
 		} else {
-			bulkWriter.Delete(docRef)
+			_, err := bulkWriter.Delete(docRef)
+			if err != nil {
+				log.Println("could not add job to bulk-writer ", err.Error())
+			}
 		}
 	}
 
@@ -217,8 +226,16 @@ func (client *FirebaseClient) BulkWrite(updates *types.BundledUpdate) {
 	for url, cache := range updates.Cache {
 		url = strings.ReplaceAll(url, "/", "_")
 		docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
-		bulkWriter.Set(docRef, map[string]interface{}{"yearRecords": cache})
+		_, err := bulkWriter.Set(docRef, map[string]interface{}{"yearRecords": cache})
+		if err != nil {
+			log.Println("could not add job to bulk-writer ", err.Error())
+		}
 	}
 
 	bulkWriter.End()
+}
+
+func (client *FirebaseClient) Close() {
+	_ = client.client.Close()
+
 }

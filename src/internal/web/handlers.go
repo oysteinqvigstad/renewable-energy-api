@@ -166,6 +166,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Create a Firebase client to get registered webhooks
 			client, err := firebase_client.NewFirebaseClient()
+			defer client.Close()
 			var notificationDBStatus int
 			if err != nil {
 				// Handle any error from the Firebase client
