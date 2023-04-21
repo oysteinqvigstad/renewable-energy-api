@@ -1,8 +1,13 @@
 package web
 
 import (
+	"assignment2/api"
 	"assignment2/internal/datastore"
+	"assignment2/internal/firebase_client"
 	"assignment2/internal/utils"
+	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -123,11 +128,74 @@ func NotificationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StatusHandler serves the status endpoint, providing availability info for dependent services,
+// the number of registered webhooks, API version, and uptime.
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
+	// Get URL segments after the StatusPath
+	segments := utils.GetSegments(r.URL, StatusPath)
+	// Calculate the uptime in seconds since the last service restart
+	uptime := utils.GetUptime()
+
 	switch r.Method {
 	case http.MethodGet:
-		http.Error(w, "Unimplemented", http.StatusServiceUnavailable)
+		switch len(segments) {
+		case 0:
+			// Define the countries API URL
+			countriesAPI := api.API_BASE + api.API_VERSION + "/" + "all"
+			// Send a request to the countries API
+			resp, err := http.Get(countriesAPI)
+			if err != nil {
+				// Handle any error from the countries API request
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// Safely close the response body and log any errors that occur
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Error closing response body: %v", err)
+			}
+
+			// Create a Firebase client to get registered webhooks
+			client, err := firebase_client.NewFirebaseClient()
+			var notificationDBStatus int
+			if err != nil {
+				// Handle any error from the Firebase client
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				notificationDBStatus = http.StatusInternalServerError
+				return
+			} else {
+				// Set the Notification DB status to OK if no error
+				notificationDBStatus = http.StatusOK
+			}
+			// Get the invocation count for all registered webhooks
+			invocationCount := client.GetAllInvocationCounts()
+			// Create a struct to hold the API status information
+			allAPI := APIStatus{
+				Countriesapi:    resp.StatusCode,      // HTTP status code for *REST Countries API*
+				Notification_db: notificationDBStatus, // HTTP status code for *Notification DB* in Firebase
+				Webhooks:        len(invocationCount), // Number of registered webhooks
+				Version:         api.API_VERSION,      // API version
+				Uptime:          uptime,               // Uptime in seconds since the last service restart
+			}
+			// Set the response content type to JSON
+			w.Header().Set("Content-Type", "application/json")
+			// Encode and return the API status as JSON, handling any errors that occur during encoding
+			if err := json.NewEncoder(w).Encode(allAPI); err != nil {
+				http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+			}
+
+		default:
+			// Handle any other cases with URL segments
+			w.Header().Set("content-type", "text/html")
+			output := "Usage: energy/v1/status/"
+			_, err := fmt.Fprintf(w, "%v", output)
+			if err != nil {
+				// Handle any error when returning the output
+				http.Error(w, "Error when returning output", http.StatusInternalServerError)
+			}
+			return
+		}
 	default:
+		// Handle any unsupported HTTP methods
 		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
 }
