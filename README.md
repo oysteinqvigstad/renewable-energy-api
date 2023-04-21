@@ -336,9 +336,110 @@ The initial endpoint focuses on returning historical percentages of renewables i
   }
 ]
 ```
-## 3. Endpoint: Notification 
+## 3. Endpoint: Notification
 
-**TODO**
+The Notification Endpoint allows users to register webhooks that will be triggered based on specified events. Webhooks can be registered for specific countries or for any country. The minimum frequency can be specified for webhook triggers. Users can register multiple webhooks, and webhook registrations are persistent, surviving service restarts through the use of a Firebase DB as backend.
+
+### Registration of Webhook
+
+    Method: POST`
+
+**Request:**
+
+`/energy/v1/notifications/`
+
+Content type: **`application/json`**
+
+The request body should contain:
+
+- The URL to be triggered upon the event
+- The country for which the trigger applies (if empty, it applies to any invocation)
+- The number of invocations after which a notification is triggered (it should re-occur every *number of invocations*)
+
+**Example request body:**
+
+```
+{
+    "url": "http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c",
+    "country": "FIN",
+    "calls": 5
+}
+```
+
+**Response**
+
+The response contains the unique ID for the registration, which can be used to view detail information or to delete the webhook registration.
+
+**Example response body**:
+
+```
+{"webhook_id":"MqZstxmerxzmn"}
+```
+
+### **Deletion of Webhook**
+
+`Method: DELETE`
+
+**Request**
+
+`/energy/v1/notifications/MqZstxmerxzmn`
+
+- `{MqZstxmerxzmn}` is the ID returned during the webhook registration
+
+**Response**
+
+The response should be implemented according to best practices.
+
+TODO: no response body
+
+### View registered webhook
+
+    Method: GET
+
+**Request:**
+
+`/energy/v1/notifications/MqZstxmerxzmn`
+
+- `{MqZstxmerxzmn}`is the ID for the webhook registration
+
+**Response**
+
+```
+{
+    "webhook_id": "MqZstxmerxzmn",
+    "url": "http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c",
+    "country": "FIN",
+    "calls": 5
+}
+```
+
+### View all registered webhooks
+
+    Method: GET
+
+**Request:**
+
+`/energy/v1/notifications/`
+
+**Response**
+
+```
+[
+   {
+      "webhook_id": "MqZstxmerxzmn",
+      "url": "http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c",
+      "country": "FIN",
+      "calls": 5
+   },
+   {
+      "webhook_id": "DiSoisivucios",
+      "url": "http://webhook.site/0aa45256-5r6y-4461-8c1e-d73hf793yf73f",
+      "country": "SWE",
+      "calls": 2
+   },
+   ...
+]
+```
 
 ## 4. Endpoint: Status 
 
@@ -371,3 +472,11 @@ The response contains the following information:
    "uptime": <time in seconds from the last service restart>
 }
 ```
+# Deployment
+
+The service is deployed on an IaaS solution OpenStack using Docker.
+
+URL to the deployed service:
+
+Source repository :
+
