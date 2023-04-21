@@ -3,6 +3,7 @@ package web
 import (
 	"assignment2/internal/types"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -82,4 +83,30 @@ func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data types.Yea
 	value[url.String()] = data
 	updateFirestore(s.ChCache, value)
 	httpRespondJSON(w, data, s)
+}
+
+// HttpGetStatusCode returns the statuscode of a POST request
+func HttpPostStatusCode(t *testing.T, url string, payload string) int {
+	client := http.Client{}
+	defer client.CloseIdleConnections()
+	res, err := http.Post(url, "application/json", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal("Failed to send POST", err)
+	}
+	return res.StatusCode
+}
+
+// HttpDeleteStatusCode returns the statuscode of a DELETE request
+func HttpDeleteStatusCode(t *testing.T, url string, payload string) int {
+	client := http.Client{}
+	defer client.CloseIdleConnections()
+	req, err := http.NewRequest(http.MethodDelete, url, strings.NewReader(payload))
+	if err != nil {
+		log.Fatalf("Error creating DELETE request: %v", err)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error sending DELETE request: %v", err)
+	}
+	return res.StatusCode
 }

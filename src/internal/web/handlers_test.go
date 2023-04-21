@@ -2,11 +2,13 @@ package web
 
 import (
 	"assignment2/internal/types"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -181,4 +183,139 @@ func calculateAverage(dataList types.YearRecordList) float64 {
 	}
 	avg := sum / float64(len(dataList))
 	return avg
+}
+
+func TestNotificationHandler(t *testing.T) {
+	s := NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{})
+	server := httptest.NewServer(http.HandlerFunc(s.NotificationHandler))
+	defer server.Close()
+
+	// setting up receiving webhook server
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	responseData := make([]WebhookResponse, 0, 5)
+	receiverServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// test 10: receiving webhook method is Post
+		if r.Method != http.MethodPost {
+			t.Fatal("expected method to be post")
+		}
+
+		// test 11: country name is correct
+		data := WebhookResponse{}
+		json.NewDecoder(r.Body).Decode(&data)
+		if data.Country != "Germany" {
+			t.Fatal("Expected country name to be Germany")
+		}
+
+		// POST received and tested, allowing test to continue
+		wg.Done()
+	}))
+	defer receiverServer.Close()
+
+	// test 1: Create two valid webhook registration
+	jsonBodyCorrect := "{ \"url\": \"" + receiverServer.URL + "\", \"country\": \"DEU\", \"calls\": 5 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyCorrect) != http.StatusCreated {
+		t.Fatal("Expected 201 created")
+	}
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyCorrect) != http.StatusCreated {
+		t.Fatal("Expected 201 created")
+	}
+
+	// test 2: Invalid webhook registration (no http:// or https:// prefix)
+	jsonBodyInvalid := "{ \"url\": \"webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"DEU\", \"calls\": 5 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 3: Invalid webhook registration (invalid country code)
+	jsonBodyInvalid = "{ \"url\": \"http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"SVE\", \"calls\": 5 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 4: Invalid webhook registration (invalid calls digit)
+	jsonBodyInvalid = "{ \"url\": \"http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"DEU\", \"calls\": -1 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 2: Invalid webhook registration (no http:// or https:// prefix)
+	jsonBodyInvalid = "{ \"url\": \"webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"DEU\", \"calls\": 5 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 3: Invalid webhook registration (invalid country code)
+	jsonBodyInvalid = "{ \"url\": \"http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"SVE\", \"calls\": 5 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 4: Invalid webhook registration (invalid calls digit)
+	jsonBodyInvalid = "{ \"url\": \"http://webhook.site/0aa53816-5e7b-4461-8c1e-d9732383bd0c\", \"country\": \"DEU\", \"calls\": -1 }"
+	if HttpPostStatusCode(t, server.URL+NotificationsPath, jsonBodyInvalid) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 5: Show all webhook registrations
+	HttpGetAndDecode(t, server.URL+NotificationsPath, &responseData)
+	if len(responseData) != 2 {
+		t.Fatal("expected one registration")
+	}
+
+	// test 6: Show all webhook registrations
+	HttpGetAndDecode(t, server.URL+NotificationsPath, &responseData)
+	if len(responseData) != 2 {
+		t.Fatal("expected one registration")
+	}
+
+	// test 6: Show a specific webhook registration based on ID
+	singleResponse := WebhookResponse{}
+	HttpGetAndDecode(t, server.URL+NotificationsPath+responseData[0].WebhookID, &singleResponse)
+	if singleResponse.WebhookID != responseData[0].WebhookID {
+		t.Fatal("expected service to return webhook data")
+	}
+
+	// test 7: Delete a webhook
+	if HttpDeleteStatusCode(t, server.URL+NotificationsPath+responseData[0].WebhookID, "") != http.StatusNoContent {
+		t.Fatal("Expected webhook to be deleted")
+	}
+
+	// test 8: Attempting to delete an invalid webhook ID
+	if HttpDeleteStatusCode(t, server.URL+NotificationsPath+"my_webhook_id", "") != http.StatusBadRequest {
+		t.Fatal("Expected server to respond with Bad Request")
+	}
+
+	// test 9: Trigger a webhook
+	renewablesServer := httptest.NewServer(http.HandlerFunc(s.EnergyCurrentHandler))
+	defer renewablesServer.Close()
+	for i := 0; i < 5; i++ {
+		if HttpGetStatusCode(t, renewablesServer.URL+RenewablesCurrentPath+"deu") != http.StatusOK {
+			t.Fatal("Expected 200 OK")
+		}
+	}
+
+	// Waiting for response to be processed by the receiving mock server
+	wg.Wait()
+
+	// test 12: Invalid request with second segment after webhook_ID
+	if HttpGetStatusCode(t, server.URL+NotificationsPath+"UHVvwFuc4xLTt/extra_segment") != http.StatusBadRequest {
+		t.Fatal("Expected status Bad Request")
+	}
+
+	// test 13: Invalid request with second segment after webhook_ID
+	if HttpGetStatusCode(t, server.URL+NotificationsPath+"UHVvwFuc4xLTt/extra_segment") != http.StatusBadRequest {
+		t.Fatal("Expected status Bad Request")
+	}
+
+	// test 14: Invalid webhook registration with extra URL segment
+	if HttpPostStatusCode(t, server.URL+NotificationsPath+"extra_segment", jsonBodyCorrect) != http.StatusBadRequest {
+		t.Fatal("Expected 400 Bad Request")
+	}
+
+	// test 15: Attempting to delete webhook without webhook ID
+	if HttpDeleteStatusCode(t, server.URL+NotificationsPath, "") != http.StatusBadRequest {
+		t.Fatal("Expected server to respond with Bad Request")
+	}
 }

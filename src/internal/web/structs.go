@@ -8,3 +8,9 @@ type APIStatus struct {
 	Version         string `json:"version"`
 	Uptime          int    `json:"uptime"`
 }
+type WebhookResponse struct {
+	WebhookID string `json:"webhook_id"`
+	URL       string `json:"url,omitempty"`
+	Country   string `json:"country"`
+	Calls     int64  `json:"calls"`
+}

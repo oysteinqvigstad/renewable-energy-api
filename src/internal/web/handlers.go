@@ -70,7 +70,6 @@ func (s *State) EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Check cache first
 		if cache, err := s.Mode.GetCacheFromFirebase(r.URL); err == nil {
-			println("got from cache!!!!")
 			httpRespondJSON(w, cache, s)
 			return
 		}
@@ -134,7 +133,7 @@ func (s *State) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Usage: "+NotificationsPath+"{id}", http.StatusBadRequest)
 		}
 	default:
-		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
+		http.Error(w, "Only GET, POST and DELETE Method is supported", http.StatusBadRequest)
 	}
 }
 

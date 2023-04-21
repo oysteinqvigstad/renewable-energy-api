@@ -19,9 +19,8 @@ import (
 // and triggers webhooks accordingly.
 func ProcessWebhookByCountry(ccna3 []string, s *State) {
 	for _, code := range ccna3 {
-		// TODO: Add mutex lock or other mechanism
 		s.InvocationCounts[code]++
-		s.ChInvocation <- code
+		updateFirestore(s.ChInvocation, code)
 		triggerWebhooksForCountry(code, s.InvocationCounts[code], s.DB.GetName(code), s)
 	}
 }
@@ -183,7 +182,7 @@ func RemoveWebhookByID(w http.ResponseWriter, webhookID string, s *State) {
 	if record, ok := s.Registrations[webhookID]; ok {
 		delete(s.Registrations, webhookID)
 		update := types.RegistrationAction{Add: false, Registration: record}
-		s.ChRegistration <- update
+		updateFirestore(s.ChRegistration, update)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -201,10 +200,10 @@ func triggerWebhooksForCountry(countrycode string, count int64, name string, s *
 	for _, reg := range s.Registrations {
 		if reg.Country == countrycode {
 			if count > 0 && count%reg.Calls == 0 {
-				postToWebhook(reg.URL, map[string]interface{}{
-					"webhook_id": reg.WebhookID,
-					"country":    name,
-					"calls":      count,
+				postToWebhook(reg.URL, WebhookResponse{
+					WebhookID: reg.WebhookID,
+					Country:   name,
+					Calls:     count,
 				})
 			}
 		}
@@ -213,7 +212,7 @@ func triggerWebhooksForCountry(countrycode string, count int64, name string, s *
 
 // postToWebhook is a function that sends a POST request to the specified webhook URL
 // with the provided registration data as the request body.
-func postToWebhook(url string, registration map[string]interface{}) {
+func postToWebhook(url string, registration WebhookResponse) {
 	client := web_client.NewClient()
 	err := client.SetURL(url)
 	if err != nil {
