@@ -1,8 +1,8 @@
 package web
 
 import (
-	"assignment2/internal/datastore"
 	"assignment2/internal/firebase_client"
+	"assignment2/internal/types"
 	"assignment2/internal/web_client"
 	"bytes"
 	"encoding/json"
@@ -15,66 +15,20 @@ import (
 	"time"
 )
 
-var (
-	invocationCount     map[string]int64
-	registrations       map[string]firebase_client.InvocationRegistration
-	invocateChannel     chan string
-	registrationChannel chan firebase_client.RegistrationAction
-	cacheChannel        chan map[string]datastore.YearRecordList
-	serviceStarted      bool
-)
-
-// InitializeWebhookService is a function that initializes the webhook service.
-// It prevents the service from being started multiple times, initiates data structures,
-// retrieves registrations from Firestore, and starts the firebaseWorker goroutine.
-func InitializeWebhookService() {
-	if serviceStarted == true {
-		log.Fatal("Webhook service cannot be started twice")
-	}
-	FirestoreEnabled = true
-	initializeDataStructures()
-	loadRegistrationsFromFirestore()
-	go firebaseWorker()
-
-}
-
-// initializeDataStructures is a function that initializes the necessary data structures
-// for the webhook service, such as invocation count, registrations, and channels.
-func initializeDataStructures() {
-	invocationCount = make(map[string]int64)
-	registrations = make(map[string]firebase_client.InvocationRegistration)
-	invocateChannel = make(chan string, 1000)
-	registrationChannel = make(chan firebase_client.RegistrationAction, 10)
-	cacheChannel = make(chan map[string]datastore.YearRecordList, 100)
-}
-
-// loadRegistrationsFromFirestore is a function that retrieves the invocation counts
-// and registrations from Firestore using the Firebase client and populates the respective data structures.
-func loadRegistrationsFromFirestore() {
-	// initiate data structures
-	println("Downloading counters and registrations from firestore")
-	client, err := firebase_client.NewFirebaseClient()
-	if err != nil {
-		log.Println("Could not initiate firebase client")
-	}
-	invocationCount = client.GetAllInvocationCounts()
-	registrations = client.GetAllInvocationRegistrations()
-}
-
 // ProcessWebhookByCountry is a function that processes a list of country codes, increments their invocation count,
 // and triggers webhooks accordingly.
-func ProcessWebhookByCountry(ccna3 []string, db *datastore.RenewableDB) {
+func ProcessWebhookByCountry(ccna3 []string, s *State) {
 	for _, code := range ccna3 {
 		// TODO: Add mutex lock or other mechanism
-		invocationCount[code]++
-		invocateChannel <- code
-		triggerWebhooksForCountry(code, invocationCount[code], db.GetName(code))
+		s.InvocationCounts[code]++
+		s.ChInvocation <- code
+		triggerWebhooksForCountry(code, s.InvocationCounts[code], s.DB.GetName(code), s)
 	}
 }
 
 // generateWebhookID is a function that generates a unique 13-character
 // alphanumeric string to be used as a webhook ID.
-func generateWebhookID() string {
+func generateWebhookID(s *State) string {
 	// Define the character set for the webhook ID
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -91,17 +45,17 @@ func generateWebhookID() string {
 
 		// Check if the generated webhook ID already exists in the registrations map.
 		// If it doesn't exist (i.e., it's unique), break the loop and return the ID.
-		if _, ok := registrations[string(b)]; !ok {
+		if _, ok := s.Registrations[string(b)]; !ok {
 			break
 		}
 	}
 	return string(b)
 }
 
-// firebaseWorker is a function that runs in the background and periodically
+// firebaseUpdateWorker is a function that runs in the background and periodically
 // sends updates to Firebase. It listens for invocation count and registration
 // updates and sends them to Firebase in bulk every FirebaseUpdateFreq seconds.
-func firebaseWorker() {
+func firebaseUpdateWorker(s *State) {
 	// Create a new ticker to trigger Firebase updates at a fixed interval
 	ticker := time.NewTicker(FirebaseUpdateFreq * time.Second)
 
@@ -119,17 +73,17 @@ func firebaseWorker() {
 		select {
 		// If there's a new invocation count update, add it to the updates
 		// and set the Ready flag to indicate that updates are available
-		case countryCode := <-invocateChannel:
-			updates.InvocationCount[countryCode] = invocationCount[countryCode]
+		case countryCode := <-s.ChInvocation:
+			updates.InvocationCount[countryCode] = s.InvocationCounts[countryCode]
 			updates.Ready = true
 
 		// If there's a new registration update, add it to the updates
 		// and set the Ready flag to indicate that updates are available
-		case action := <-registrationChannel:
+		case action := <-s.ChRegistration:
 			updates.Registrations[action.Registration.WebhookID] = action
 			updates.Ready = true
 
-		case cache := <-cacheChannel:
+		case cache := <-s.ChCache:
 			for key, value := range cache {
 				updates.Cache[key] = value
 			}
@@ -149,9 +103,9 @@ func firebaseWorker() {
 
 // registerWebhook is an HTTP handler function that registers a new webhook
 // by decoding an incoming JSON request and validating the data.
-func registerWebhook(w http.ResponseWriter, r *http.Request) {
+func registerWebhook(w http.ResponseWriter, r *http.Request, s *State) {
 	// create a new InvocationRegistration struct to store the decoded data
-	var data firebase_client.InvocationRegistration
+	var data types.InvocationRegistration
 
 	// decode the request body into the InvocationRegistration struct
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -162,24 +116,24 @@ func registerWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validating the JSON input
-	if err := validateRegistrationData(data); err != nil {
+	if err := validateRegistrationData(data, s); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// adding registration to data structure and notifying firestore that the registration
 	// can be backup up
-	data.WebhookID = generateWebhookID()
-	newEntry := firebase_client.RegistrationAction{Add: true, Registration: data}
-	registrations[data.WebhookID] = data
-	registrationChannel <- newEntry
+	data.WebhookID = generateWebhookID(s)
+	newEntry := types.RegistrationAction{Add: true, Registration: data}
+	s.Registrations[data.WebhookID] = data
+	updateFirestore(s.ChRegistration, newEntry)
 	w.WriteHeader(http.StatusCreated)
 	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID}, nil)
 }
 
 // validateRegistrationData is a function that takes an InvocationRegistration
 // struct as input and returns an error if the registration data is invalid.
-func validateRegistrationData(registration firebase_client.InvocationRegistration) error {
+func validateRegistrationData(registration types.InvocationRegistration, s *State) error {
 	// Check if the number of calls is less than 1. If so, return an error.
 	if registration.Calls < 1 {
 		return errors.New("number of calls must be 1 or higher")
@@ -193,7 +147,7 @@ func validateRegistrationData(registration firebase_client.InvocationRegistratio
 
 	// Check if the country is recognized (i.e., if it exists in the invocationCount map).
 	// If not, return an error.
-	if _, ok := invocationCount[registration.Country]; !ok {
+	if _, ok := s.DB[registration.Country]; !ok {
 		return errors.New("country not recognized")
 	}
 
@@ -203,9 +157,9 @@ func validateRegistrationData(registration firebase_client.InvocationRegistratio
 
 // listAllWebhooks is a function that retrieves all registered webhooks
 // and sends them as a JSON response to the client.
-func listAllWebhooks(w http.ResponseWriter) {
-	registrationList := make([]firebase_client.InvocationRegistration, 0, len(registrations))
-	for _, registration := range registrations {
+func listAllWebhooks(w http.ResponseWriter, s *State) {
+	registrationList := make([]types.InvocationRegistration, 0, len(s.Registrations))
+	for _, registration := range s.Registrations {
 		registrationList = append(registrationList, registration)
 	}
 	httpRespondJSON(w, registrationList, nil)
@@ -213,8 +167,8 @@ func listAllWebhooks(w http.ResponseWriter) {
 
 // listAllWebhooksByID is a function that retrieves a registered webhook by its ID
 // and sends it as a JSON response to the client if found, otherwise it sends an error.
-func listAllWebhooksByID(w http.ResponseWriter, webhookID string) {
-	if reg, ok := registrations[webhookID]; ok {
+func listAllWebhooksByID(w http.ResponseWriter, webhookID string, s *State) {
+	if reg, ok := s.Registrations[webhookID]; ok {
 		httpRespondJSON(w, reg, nil)
 		return
 	}
@@ -224,11 +178,11 @@ func listAllWebhooksByID(w http.ResponseWriter, webhookID string) {
 // RemoveWebhookByID is a function that removes a webhook registration by its ID.
 // If the webhook is found and deleted successfully, it sends a "No Content" status,
 // otherwise, it sends an error.
-func RemoveWebhookByID(w http.ResponseWriter, webhookID string) {
-	if record, ok := registrations[webhookID]; ok {
-		delete(registrations, webhookID)
-		update := firebase_client.RegistrationAction{Add: false, Registration: record}
-		registrationChannel <- update
+func RemoveWebhookByID(w http.ResponseWriter, webhookID string, s *State) {
+	if record, ok := s.Registrations[webhookID]; ok {
+		delete(s.Registrations, webhookID)
+		update := types.RegistrationAction{Add: false, Registration: record}
+		s.ChRegistration <- update
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -242,11 +196,11 @@ func RemoveWebhookByID(w http.ResponseWriter, webhookID string) {
 // TODO: Refactor to use a worker thread!
 // This is not the best way to handle webhooks, as it needs to check
 // every registration every time a country code is invoked.
-func triggerWebhooksForCountry(countrycode string, count int64, name string) {
-	for _, reg := range registrations {
+func triggerWebhooksForCountry(countrycode string, count int64, name string, s *State) {
+	for _, reg := range s.Registrations {
 		if reg.Country == countrycode {
 			if count > 0 && count%reg.Calls == 0 {
-				go postToWebhook(reg.URL, map[string]interface{}{
+				postToWebhook(reg.URL, map[string]interface{}{
 					"webhook_id": reg.WebhookID,
 					"country":    name,
 					"calls":      count,

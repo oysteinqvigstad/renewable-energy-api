@@ -1,7 +1,7 @@
 package firebase_client
 
 import (
-	"assignment2/internal/datastore"
+	"assignment2/internal/types"
 	"cloud.google.com/go/firestore" // Firestore-specific support
 	"context"                       // State handling across API boundaries; part of native GoLang API
 	firebase "firebase.google.com/go"
@@ -86,7 +86,7 @@ func (client *FirebaseClient) GetInvocationCount(ccna3 string) (int64, error) {
 
 func (client *FirebaseClient) GetAllInvocationCounts() map[string]int64 {
 	data := map[string]int64{}
-	docs, err := client.getAllDocuments(CollectionInvocationCounts)
+	docs, err := client.GetAllDocuments(CollectionInvocationCounts)
 	if err != nil {
 		log.Printf("Could not fetch invocation counts from firestore")
 		return data
@@ -99,7 +99,7 @@ func (client *FirebaseClient) GetAllInvocationCounts() map[string]int64 {
 	return data
 }
 
-func (client *FirebaseClient) getAllDocuments(collection string) ([]*firestore.DocumentSnapshot, error) {
+func (client *FirebaseClient) GetAllDocuments(collection string) ([]*firestore.DocumentSnapshot, error) {
 	docRef := client.client.Collection(collection).Documents(client.ctx)
 	docs, err := docRef.GetAll()
 	if err != nil {
@@ -110,14 +110,14 @@ func (client *FirebaseClient) getAllDocuments(collection string) ([]*firestore.D
 }
 
 // SetRenewablesCache stores a YearRecordList in the renewables cache collection using the given URL as the document identifier.
-func (client *FirebaseClient) SetRenewablesCache(url string, list datastore.YearRecordList) {
+func (client *FirebaseClient) SetRenewablesCache(url string, list types.YearRecordList) {
 	url = strings.ReplaceAll(url, "/", "_")
 	// e.g. SetRenewablesCache("/current/nor?neighbours=true", *data)
 	// Access the renewables cache collection, with the specified url, if not exist, it will be created
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
 
 	// Set or update the document with the provided data as a RenewableDB containing the YearRecordList
-	_, err := docRef.Set(client.ctx, datastore.RenewableDB{
+	_, err := docRef.Set(client.ctx, types.RenewableDB{
 		"yearRecords": list,
 	})
 	// Log errors if they occur during the Set operation
@@ -127,7 +127,7 @@ func (client *FirebaseClient) SetRenewablesCache(url string, list datastore.Year
 }
 
 // GetRenewablesCache retrieves a cached YearRecordList and its creation time by URL.
-func (client *FirebaseClient) GetRenewablesCache(url string) (datastore.YearRecordList, time.Time, error) {
+func (client *FirebaseClient) GetRenewablesCache(url string) (types.YearRecordList, time.Time, error) {
 	url = strings.ReplaceAll(url, "/", "_")
 	// Access the renewables cache collection and get a reference to the document with the specified URL
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
@@ -135,14 +135,14 @@ func (client *FirebaseClient) GetRenewablesCache(url string) (datastore.YearReco
 	doc, err := docRef.Get(client.ctx)
 	if err != nil {
 		log.Printf("Failed to get renewables cache entry: %v", err)
-		return datastore.YearRecordList{}, time.Time{}, err
+		return types.YearRecordList{}, time.Time{}, err
 	}
 	// Extract the YearRecordList from the document
-	var db datastore.RenewableDB
+	var db types.RenewableDB
 	err = doc.DataTo(&db)
 	if err != nil {
 		log.Printf("Failed to convert document data to RenewableDB: %v", err)
-		return datastore.YearRecordList{}, time.Time{}, err
+		return types.YearRecordList{}, time.Time{}, err
 	}
 	// Get the YearRecordList from the RenewableDB and creation time
 	yearRecords := db["yearRecords"]
@@ -153,6 +153,7 @@ func (client *FirebaseClient) GetRenewablesCache(url string) (datastore.YearReco
 
 // DeleteRenewablesCache removes the specified document from the renewables cache collection using the provided URL.
 func (client *FirebaseClient) DeleteRenewablesCache(url string) {
+	url = strings.ReplaceAll(url, "/", "_")
 	// Access the renewables cache collection and get a reference to the document with the specified URL
 	docRef := client.client.Collection(CollectionRenewablesCache).Doc(url)
 	// Delete the document
@@ -164,7 +165,7 @@ func (client *FirebaseClient) DeleteRenewablesCache(url string) {
 }
 
 // SetInvocationRegistration stores an InvocationRegistration in Firestore
-func (client *FirebaseClient) SetInvocationRegistration(registration InvocationRegistration) {
+func (client *FirebaseClient) SetInvocationRegistration(registration types.InvocationRegistration) {
 	// Access the invocation_registrations collection, with the specified WebhookID, if not exist, it will be created
 	docRef := client.client.Collection(CollectionInvocationRegistrations).Doc(registration.WebhookID)
 	_, err := docRef.Set(client.ctx, registration) // Set or update the document with the provided data
@@ -174,15 +175,15 @@ func (client *FirebaseClient) SetInvocationRegistration(registration InvocationR
 }
 
 // GetAllInvocationRegistrations retrieves all InvocationRegistration documents from Firestore
-func (client *FirebaseClient) GetAllInvocationRegistrations() map[string]InvocationRegistration {
-	result := map[string]InvocationRegistration{}
-	docs, err := client.getAllDocuments(CollectionInvocationRegistrations)
+func (client *FirebaseClient) GetAllInvocationRegistrations() map[string]types.InvocationRegistration {
+	result := map[string]types.InvocationRegistration{}
+	docs, err := client.GetAllDocuments(CollectionInvocationRegistrations)
 	if err != nil {
 		log.Printf("Could not fetch data from firestore")
 		return result
 	}
 	for _, doc := range docs {
-		var registration InvocationRegistration
+		var registration types.InvocationRegistration
 		err = doc.DataTo(&registration)
 		if err != nil {
 			return result
@@ -193,7 +194,7 @@ func (client *FirebaseClient) GetAllInvocationRegistrations() map[string]Invocat
 	return result
 }
 
-func (client *FirebaseClient) BulkWrite(updates *BundledUpdate) {
+func (client *FirebaseClient) BulkWrite(updates *types.BundledUpdate) {
 	bulkWriter := client.client.BulkWriter(client.ctx)
 
 	// updating invocation counts

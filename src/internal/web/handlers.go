@@ -1,9 +1,6 @@
 package web
 
 import (
-	"assignment2/api"
-	"assignment2/internal/datastore"
-	"assignment2/internal/firebase_client"
 	"assignment2/internal/utils"
 	"encoding/json"
 	"fmt"
@@ -27,99 +24,110 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
+// EnergyCurrentHandler handles the request for the current energy data.
+// It retrieves the data from cache if available, otherwise it fetches the data from the database.
+func (s *State) EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
 
-			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
-				println("got from cache!!!!")
-				httpRespondJSON(w, cache, energyData)
-				return
-			}
+		// Checking cache first
+		if cache, err := s.Mode.GetCacheFromFirebase(r.URL); err == nil {
+			httpRespondJSON(w, cache, s)
+			return
+		}
 
-			segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
-			neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
+		segments := utils.GetSegments(r.URL, RenewablesCurrentPath)
+		neighbours, _ := utils.GetQueryStr(r.URL, "neighbours")
 
-			switch len(segments) {
+		switch len(segments) {
+		case 0:
+			// Return the latest data for all countries
+			httpCacheAndRespondJSON(w, r.URL, s.DB.GetLatest("", false), s)
+		case 1:
+			returnData := s.DB.GetLatest(segments[0], neighbours == "true")
+			switch len(returnData) {
 			case 0:
-				httpCacheAndRespondJSON(w, r.URL, energyData.GetLatest("", false), energyData)
-			case 1:
-				returnData := energyData.GetLatest(segments[0], neighbours == "true")
-				switch len(returnData) {
-				case 0:
-					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
-				default:
-					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
-				}
+				// Return the latest data for a specific country
+				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 			default:
-				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
+				httpCacheAndRespondJSON(w, r.URL, returnData, s)
 			}
 		default:
-			http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
+			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 		}
+	default:
+		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
 }
 
-func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
+// EnergyHistoryHandler handles the request for the historical energy data.
+// It retrieves the data from cache if available, otherwise it fetches the data from the database.
+func (s *State) EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
 
-			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
-				println("got from cache!!!!")
-				httpRespondJSON(w, cache, energyData)
-				return
-			}
+		// Check cache first
+		if cache, err := s.Mode.GetCacheFromFirebase(r.URL); err == nil {
+			println("got from cache!!!!")
+			httpRespondJSON(w, cache, s)
+			return
+		}
 
-			segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
-			begin, _ := utils.GetQueryInt(r.URL, "begin")
-			end, _ := utils.GetQueryInt(r.URL, "end")
-			sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
+		segments := utils.GetSegments(r.URL, RenewablesHistoryPath)
+		begin, _ := utils.GetQueryInt(r.URL, "begin")
+		end, _ := utils.GetQueryInt(r.URL, "end")
+		sort, _ := utils.GetQueryStr(r.URL, "sortByValue")
 
-			switch len(segments) {
-			case 0:
-				httpCacheAndRespondJSON(w, r.URL, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
-			case 1:
-				returnData := energyData.GetHistoric(segments[0], begin, end, sort == "true")
-				if len(returnData) > 0 {
-					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
-				} else {
-					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
-				}
-			default:
-				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
+		switch len(segments) {
+		case 0:
+			// Return the historical average data for all countries
+			httpCacheAndRespondJSON(w, r.URL, s.DB.GetHistoricAvg(begin, end, sort == "true"), s)
+		case 1:
+			// Return the historical data for a specific country
+			returnData := s.DB.GetHistoric(segments[0], begin, end, sort == "true")
+			if len(returnData) > 0 {
+				httpCacheAndRespondJSON(w, r.URL, returnData, s)
+			} else {
+				http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 			}
 		default:
-			http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
+			http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
 		}
+	default:
+		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
 	}
 }
 
-func NotificationHandler(w http.ResponseWriter, r *http.Request) {
+// NotificationHandler handles the request for managing webhook notifications.
+// It supports GET, POST, and DELETE methods for listing, registering, and removing webhooks, respectively.
+func (s *State) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 	segments := utils.GetSegments(r.URL, NotificationsPath)
 
 	switch r.Method {
 	case http.MethodGet:
 		switch len(segments) {
 		case 0:
-			listAllWebhooks(w)
+			// List all registered webhooks
+			listAllWebhooks(w, s)
 		case 1:
-			listAllWebhooksByID(w, segments[0])
+			// List a specific webhook by its ID
+			listAllWebhooksByID(w, segments[0], s)
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{?webhook_id}", http.StatusBadRequest)
 		}
 	case http.MethodPost:
 		switch len(segments) {
 		case 0:
-			registerWebhook(w, r)
+			// Register a new webhook
+			registerWebhook(w, r, s)
 		default:
 			http.Error(w, "Expected POST in JSON on "+NotificationsPath, http.StatusBadRequest)
 		}
 	case http.MethodDelete:
 		switch len(segments) {
 		case 1:
-			RemoveWebhookByID(w, segments[0])
+			// Remove a webhook by its ID
+			RemoveWebhookByID(w, segments[0], s)
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{id}", http.StatusBadRequest)
 		}

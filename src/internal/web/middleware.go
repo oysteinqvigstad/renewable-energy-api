@@ -1,37 +1,23 @@
 package web
 
 import (
-	"assignment2/internal/datastore"
-	"assignment2/internal/firebase_client"
+	"assignment2/internal/types"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 )
 
-var FirestoreEnabled bool
-
 // httpRespondJSON takes any type of data and attempts to encode it as JSON to the response writer
-func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB) {
+func httpRespondJSON(w http.ResponseWriter, data any, s *State) {
 	w.Header().Set("content-type", "application/json")
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(data)
 	if err != nil {
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
 	}
-	go invocate(data, db)
-}
-
-func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
-	// TODO: refactor to use interface{} ?
-	value := make(map[string]datastore.YearRecordList)
-	value[url.String()] = data
-	if FirestoreEnabled {
-		cacheChannel <- value
-	}
-	httpRespondJSON(w, data, db)
+	go invocate(data, s)
 }
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
@@ -60,31 +46,40 @@ func HttpGetStatusCode(t *testing.T, url string) int {
 	return res.StatusCode
 }
 
-func invocate(data any, db *datastore.RenewableDB) {
+// invocate processes webhooks for the given data and the provided application state.
+func invocate(data any, s *State) {
 	var invocationList []string
 	switch data.(type) {
-	case datastore.YearRecordList:
-		invocationList = data.(datastore.YearRecordList).Invocate()
-	case datastore.YearRecord:
-		invocationList = datastore.YearRecordList{data.(datastore.YearRecord)}.Invocate()
+	case types.YearRecordList:
+		invocationList = data.(types.YearRecordList).MakeUniqueCCNACodes()
+	case types.YearRecord:
+		invocationList = types.YearRecordList{data.(types.YearRecord)}.MakeUniqueCCNACodes()
 	}
 
+	// Process webhooks if there are any country codes in the invocation list
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-		ProcessWebhookByCountry(invocationList, db)
+		ProcessWebhookByCountry(invocationList, s)
 	}
 }
 
-func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	if FirestoreEnabled {
-		println("attempting to get from cache ", url.String())
-		client, err := firebase_client.NewFirebaseClient()
-		// TODO: Handle timestamp?
-		data, _, err := client.GetRenewablesCache(url.String())
-		if err != nil {
-			return data, errors.New("cache not found")
+// updateFirestore sends the given data to the specified channel.
+func updateFirestore[T any](channel chan T, data T) {
+	// checking if channel is open
+	if channel != nil {
+		select {
+		case channel <- data:
+			// successful
+		default:
+			println("channel is full! dropping data")
 		}
-		return data, nil
 	}
-	return datastore.YearRecordList{}, errors.New("firebase disabled")
+}
+
+// httpCacheAndRespondJSON updates the cache, and sends a JSON response with the provided data and application state.
+func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data types.YearRecordList, s *State) {
+	value := make(map[string]types.YearRecordList)
+	value[url.String()] = data
+	updateFirestore(s.ChCache, value)
+	httpRespondJSON(w, data, s)
 }
