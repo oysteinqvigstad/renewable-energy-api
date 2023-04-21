@@ -22,12 +22,12 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyCurrentHandler(energyData *datastore.RenewableDB, m Mode) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 
-			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
+			if cache, err := m.GetCacheFromFirebase(r.URL); err == nil {
 				println("got from cache!!!!")
 				httpRespondJSON(w, cache, energyData)
 				return
@@ -38,14 +38,14 @@ func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.Respons
 
 			switch len(segments) {
 			case 0:
-				httpCacheAndRespondJSON(w, r.URL, energyData.GetLatest("", false), energyData)
+				m.httpCacheAndRespondJSON(w, r.URL, energyData.GetLatest("", false), energyData)
 			case 1:
 				returnData := energyData.GetLatest(segments[0], neighbours == "true")
 				switch len(returnData) {
 				case 0:
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 				default:
-					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
+					m.httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
 				}
 			default:
 				http.Error(w, "Usage: {country?}{?neighbours=bool?}", http.StatusBadRequest)
@@ -56,12 +56,12 @@ func EnergyCurrentHandler(energyData *datastore.RenewableDB) func(w http.Respons
 	}
 }
 
-func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.ResponseWriter, r *http.Request) {
+func EnergyHistoryHandler(energyData *datastore.RenewableDB, m Mode) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 
-			if cache, err := GetCacheFromFirebase(r.URL); err == nil {
+			if cache, err := m.GetCacheFromFirebase(r.URL); err == nil {
 				println("got from cache!!!!")
 				httpRespondJSON(w, cache, energyData)
 				return
@@ -74,11 +74,11 @@ func EnergyHistoryHandler(energyData *datastore.RenewableDB) func(w http.Respons
 
 			switch len(segments) {
 			case 0:
-				httpCacheAndRespondJSON(w, r.URL, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
+				m.httpCacheAndRespondJSON(w, r.URL, energyData.GetHistoricAvg(begin, end, sort == "true"), energyData)
 			case 1:
 				returnData := energyData.GetHistoric(segments[0], begin, end, sort == "true")
 				if len(returnData) > 0 {
-					httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
+					m.httpCacheAndRespondJSON(w, r.URL, returnData, energyData)
 				} else {
 					http.Error(w, "Could not find specified country code", http.StatusBadRequest)
 				}

@@ -6,13 +6,13 @@ import (
 	"net/http"
 )
 
-func SetupRoutes(port string, energyData *datastore.RenewableDB) *http.ServeMux {
+func SetupRoutes(port string, energyData *datastore.RenewableDB, m Mode) *http.ServeMux {
 	mux := http.ServeMux{}
 
 	// TODO: create const
 	mux.HandleFunc("/", DefaultHandler)
-	mux.HandleFunc(RenewablesCurrentPath, EnergyCurrentHandler(energyData))
-	mux.HandleFunc(RenewablesHistoryPath, EnergyHistoryHandler(energyData))
+	mux.HandleFunc(RenewablesCurrentPath, EnergyCurrentHandler(energyData, m))
+	mux.HandleFunc(RenewablesHistoryPath, EnergyHistoryHandler(energyData, m))
 	mux.HandleFunc(NotificationsPath, NotificationHandler)
 	mux.HandleFunc(StatusPath, StatusHandler)
 

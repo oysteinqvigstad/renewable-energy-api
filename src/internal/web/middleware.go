@@ -11,7 +11,39 @@ import (
 	"testing"
 )
 
-var FirestoreEnabled bool
+type Mode interface {
+	httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB)
+	GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error)
+}
+
+type WithoutFirestore struct{}
+type WithFirestore struct{}
+
+func (t WithoutFirestore) httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
+	httpRespondJSON(w, data, db)
+}
+
+func (p WithFirestore) httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
+	value := make(map[string]datastore.YearRecordList)
+	value[url.String()] = data
+	cacheChannel <- value
+	httpRespondJSON(w, data, db)
+}
+
+func (t WithoutFirestore) GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
+	return datastore.YearRecordList{}, errors.New("firebase disabled")
+}
+
+func (p WithFirestore) GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
+	println("attempting to get from cache ", url.String())
+	client, err := firebase_client.NewFirebaseClient()
+	// TODO: Handle timestamp?
+	data, _, err := client.GetRenewablesCache(url.String())
+	if err != nil {
+		return data, errors.New("cache not found")
+	}
+	return data, nil
+}
 
 // httpRespondJSON takes any type of data and attempts to encode it as JSON to the response writer
 func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB) {
@@ -24,15 +56,15 @@ func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB)
 	go invocate(data, db)
 }
 
-func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
-	// TODO: refactor to use interface{} ?
-	value := make(map[string]datastore.YearRecordList)
-	value[url.String()] = data
-	if FirestoreEnabled {
-		cacheChannel <- value
-	}
-	httpRespondJSON(w, data, db)
-}
+//func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
+// TODO: refactor to use interface{} ?
+//value := make(map[string]datastore.YearRecordList)
+//value[url.String()] = data
+//if FirestoreEnabled {
+//	cacheChannel <- value
+//}
+//httpRespondJSON(w, data, db)
+//}
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
 // from a specific url
@@ -73,18 +105,4 @@ func invocate(data any, db *datastore.RenewableDB) {
 		println("Invocated: " + strings.Join(invocationList, ","))
 		ProcessWebhookByCountry(invocationList, db)
 	}
-}
-
-func GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	if FirestoreEnabled {
-		println("attempting to get from cache ", url.String())
-		client, err := firebase_client.NewFirebaseClient()
-		// TODO: Handle timestamp?
-		data, _, err := client.GetRenewablesCache(url.String())
-		if err != nil {
-			return data, errors.New("cache not found")
-		}
-		return data, nil
-	}
-	return datastore.YearRecordList{}, errors.New("firebase disabled")
 }

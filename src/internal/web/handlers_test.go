@@ -11,7 +11,6 @@ import (
 )
 
 func TestInitialConfig(t *testing.T) {
-	FirestoreEnabled = false
 	setRootProjectDir()
 	initializeDataStructures()
 }
@@ -28,7 +27,7 @@ func TestEnergyDefaultHandler(t *testing.T) {
 // TestEnergyCurrentHandler tests the EnergyCurrentHandler function.
 func TestEnergyCurrentHandler(t *testing.T) {
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
-	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(&energyData)))
+	server := httptest.NewServer(http.HandlerFunc(EnergyCurrentHandler(&energyData, WithoutFirestore{})))
 	defer server.Close()
 
 	//dataSingle := datastore.YearRecord{}
@@ -77,7 +76,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 // Tests the invalid Method for EnergyCurrentHandler
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
-	handler := EnergyCurrentHandler(&energyData)
+	handler := EnergyCurrentHandler(&energyData, WithoutFirestore{})
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 	// Test: Send a POST request to the EnergyHistoryHandler
@@ -100,7 +99,7 @@ func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 // TestEnergyHistoryHandler tests the EnergyHistoryHandler function.
 func TestEnergyHistoryHandler(t *testing.T) {
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
-	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(&energyData)))
+	server := httptest.NewServer(http.HandlerFunc(EnergyHistoryHandler(&energyData, WithoutFirestore{})))
 	defer server.Close()
 
 	//dataSingle := datastore.YearRecord{}
@@ -158,7 +157,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 // Tests the invalid Method for EnergyHistoryHandler
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
-	handler := EnergyHistoryHandler(&energyData)
+	handler := EnergyHistoryHandler(&energyData, WithoutFirestore{})
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 	// Test: Send a POST request to the EnergyHistoryHandler
@@ -190,5 +189,4 @@ func calculateAverage(dataList datastore.YearRecordList) float64 {
 func setRootProjectDir() {
 	wd, _ := os.Getwd()
 	os.Chdir(filepath.Join(wd, "..", ".."))
-
 }

@@ -19,5 +19,7 @@ func main() {
 	web.InitializeWebhookService()
 	energyData := datastore.ParseCSV(path.Join("res", datastore.CSVFilePath))
 	utils.ResetUptime()
-	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, &energyData)))
+
+	mode := web.WithFirestore{}
+	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, &energyData, mode)))
 }
