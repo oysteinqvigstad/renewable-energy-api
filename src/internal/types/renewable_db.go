@@ -1,4 +1,4 @@
-package datastore
+package types
 
 import (
 	"assignment2/api"
@@ -10,6 +10,24 @@ import (
 	"strconv"
 	"strings"
 )
+
+const (
+	CSVFilePath = "renewable-share-energy.csv"
+)
+
+// YearRecord represents a record of renewable energy data for a specific country and year.
+type YearRecord struct {
+	Name       string  `json:"name"`
+	ISO        string  `json:"isoCode"`
+	Year       string  `json:"year,omitempty"`
+	Percentage float64 `json:"percentage"`
+}
+
+// YearRecordList is a list of YearRecord instances.
+type YearRecordList []YearRecord
+
+// RenewableDB is a map representing renewable energy data organized by country code.
+type RenewableDB map[string]YearRecordList
 
 // ParseCSV will load a CSV file into RenewableDB
 func ParseCSV(filepath string) RenewableDB {
@@ -144,7 +162,7 @@ func (db *RenewableDB) insert(record []string) {
 	}
 }
 
-// GetLatestEnergyData gets the newest data on record for a specific country
+// retrieveLatest gets the newest data on record for a specific country
 // if an empty string is given then all stub_countries_api should be returned
 func (db *RenewableDB) retrieveLatest(countryCode string) YearRecordList {
 	var data YearRecordList
@@ -168,6 +186,11 @@ func (db *RenewableDB) retrieveLatest(countryCode string) YearRecordList {
 	}
 	data.sortByName(true)
 	return data
+}
+
+// GetName returns the country name for the given countryCode in the RenewableDB.
+func (db *RenewableDB) GetName(countryCode string) string {
+	return (*db)[countryCode][0].Name
 }
 
 // yearInRange will return true/false depending on a record is within the range between `start` and `end`.
@@ -225,9 +248,10 @@ func (list YearRecordList) sortByYear(ascending bool) {
 	})
 }
 
-func (list YearRecordList) Invocate() []string {
+// MakeUniqueCCNACodes extracts unique country codes from a list of YearRecord instances.
+func (list YearRecordList) MakeUniqueCCNACodes() []string {
 	seen := map[string]bool{}
-	result := []string{}
+	var result []string
 	for _, record := range list {
 		if !seen[record.ISO] {
 			seen[record.ISO] = true
@@ -235,13 +259,4 @@ func (list YearRecordList) Invocate() []string {
 		}
 	}
 	return result
-}
-
-func (db *RenewableDB) GetName(countryCode string) string {
-	if records, ok := (*db)[countryCode]; ok {
-		if len(records) > 0 {
-			return records[0].Name
-		}
-	}
-	return countryCode
 }

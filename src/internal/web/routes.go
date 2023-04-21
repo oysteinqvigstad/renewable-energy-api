@@ -1,23 +1,25 @@
 package web
 
 import (
-	"assignment2/internal/datastore"
 	"log"
 	"net/http"
 )
 
-func SetupRoutes(port string, energyData *datastore.RenewableDB, m Mode) *http.ServeMux {
+// SetupRoutes configures the routes for the application and returns a ServeMux with the registered routes.
+func SetupRoutes(port string, s *State) *http.ServeMux {
 	mux := http.ServeMux{}
 
-	// TODO: create const
+	// Registering route handlers
 	mux.HandleFunc("/", DefaultHandler)
-	mux.HandleFunc(RenewablesCurrentPath, EnergyCurrentHandler(energyData, m))
-	mux.HandleFunc(RenewablesHistoryPath, EnergyHistoryHandler(energyData, m))
-	mux.HandleFunc(NotificationsPath, NotificationHandler)
+	mux.HandleFunc(RenewablesCurrentPath, s.EnergyCurrentHandler)
+	mux.HandleFunc(RenewablesHistoryPath, s.EnergyHistoryHandler)
+	mux.HandleFunc(NotificationsPath, s.NotificationHandler)
 	mux.HandleFunc(StatusPath, StatusHandler)
 
+	// Constructing the base domain name with the provided port
 	domainNamePort := "http://localhost:" + port
 
+	// Logging the available services and their endpoints
 	log.Println("Started services on:")
 	log.Println(domainNamePort + RenewablesCurrentPath)
 	log.Println(domainNamePort + RenewablesHistoryPath)

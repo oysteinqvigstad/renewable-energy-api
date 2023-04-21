@@ -1,70 +1,24 @@
 package web
 
 import (
-	"assignment2/internal/datastore"
-	"assignment2/internal/firebase_client"
+	"assignment2/internal/types"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 )
 
-type Mode interface {
-	httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB)
-	GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error)
-}
-
-type WithoutFirestore struct{}
-type WithFirestore struct{}
-
-func (t WithoutFirestore) httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
-	httpRespondJSON(w, data, db)
-}
-
-func (p WithFirestore) httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
-	value := make(map[string]datastore.YearRecordList)
-	value[url.String()] = data
-	cacheChannel <- value
-	httpRespondJSON(w, data, db)
-}
-
-func (t WithoutFirestore) GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	return datastore.YearRecordList{}, errors.New("firebase disabled")
-}
-
-func (p WithFirestore) GetCacheFromFirebase(url *url.URL) (datastore.YearRecordList, error) {
-	println("attempting to get from cache ", url.String())
-	client, err := firebase_client.NewFirebaseClient()
-	// TODO: Handle timestamp?
-	data, _, err := client.GetRenewablesCache(url.String())
-	if err != nil {
-		return data, errors.New("cache not found")
-	}
-	return data, nil
-}
-
 // httpRespondJSON takes any type of data and attempts to encode it as JSON to the response writer
-func httpRespondJSON(w http.ResponseWriter, data any, db *datastore.RenewableDB) {
+func httpRespondJSON(w http.ResponseWriter, data any, s *State) {
 	w.Header().Set("content-type", "application/json")
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(data)
 	if err != nil {
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
 	}
-	go invocate(data, db)
+	go invocate(data, s)
 }
-
-//func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data datastore.YearRecordList, db *datastore.RenewableDB) {
-// TODO: refactor to use interface{} ?
-//value := make(map[string]datastore.YearRecordList)
-//value[url.String()] = data
-//if FirestoreEnabled {
-//	cacheChannel <- value
-//}
-//httpRespondJSON(w, data, db)
-//}
 
 // HttpGetAndDecode is a helper function that retrieves and returns the JSON data
 // from a specific url
@@ -92,17 +46,40 @@ func HttpGetStatusCode(t *testing.T, url string) int {
 	return res.StatusCode
 }
 
-func invocate(data any, db *datastore.RenewableDB) {
+// invocate processes webhooks for the given data and the provided application state.
+func invocate(data any, s *State) {
 	var invocationList []string
 	switch data.(type) {
-	case datastore.YearRecordList:
-		invocationList = data.(datastore.YearRecordList).Invocate()
-	case datastore.YearRecord:
-		invocationList = datastore.YearRecordList{data.(datastore.YearRecord)}.Invocate()
+	case types.YearRecordList:
+		invocationList = data.(types.YearRecordList).MakeUniqueCCNACodes()
+	case types.YearRecord:
+		invocationList = types.YearRecordList{data.(types.YearRecord)}.MakeUniqueCCNACodes()
 	}
 
+	// Process webhooks if there are any country codes in the invocation list
 	if len(invocationList) > 0 {
 		println("Invocated: " + strings.Join(invocationList, ","))
-		ProcessWebhookByCountry(invocationList, db)
+		ProcessWebhookByCountry(invocationList, s)
 	}
+}
+
+// updateFirestore sends the given data to the specified channel.
+func updateFirestore[T any](channel chan T, data T) {
+	// checking if channel is open
+	if channel != nil {
+		select {
+		case channel <- data:
+			// successful
+		default:
+			println("channel is full! dropping data")
+		}
+	}
+}
+
+// httpCacheAndRespondJSON updates the cache, and sends a JSON response with the provided data and application state.
+func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data types.YearRecordList, s *State) {
+	value := make(map[string]types.YearRecordList)
+	value[url.String()] = data
+	updateFirestore(s.ChCache, value)
+	httpRespondJSON(w, data, s)
 }
