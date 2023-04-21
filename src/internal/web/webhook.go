@@ -64,6 +64,7 @@ func firebaseUpdateWorker(s *State) {
 	if err != nil {
 		log.Fatal("Could not start firebase client")
 	}
+	defer client.Close()
 
 	// Initialize an empty bundled update to store updates before sending them to Firebase
 	updates := firebase_client.NewBundledUpdate()

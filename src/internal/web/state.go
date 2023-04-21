@@ -62,9 +62,12 @@ func (t WithoutFirestore) GetCacheFromFirebase(_ *url.URL) (types.YearRecordList
 
 // GetCacheFromFirebase retrieves the cached data from Firestore in WithFirestore mode.
 func (p WithFirestore) GetCacheFromFirebase(url *url.URL) (types.YearRecordList, error) {
-	println("attempting to get from cache ", url.String())
 	client, err := firebase_client.NewFirebaseClient()
-	// TODO: Handle timestamp?
+	if err != nil {
+		log.Println("Could not start firebase client")
+		return types.YearRecordList{}, errors.New("could not start firebase client")
+	}
+	defer client.Close()
 	data, timestamp, err := client.GetRenewablesCache(url.String())
 	twoMinutesAgo := time.Now().Add(-24 * 7 * time.Hour)
 	if timestamp.Before(twoMinutesAgo) {
@@ -82,6 +85,11 @@ func (p WithFirestore) GetCacheFromFirebase(url *url.URL) (types.YearRecordList,
 func (p WithFirestore) GetAllInvocationCounts() map[string]int64 {
 	data := map[string]int64{}
 	if client, err := firebase_client.NewFirebaseClient(); err == nil {
+		if err != nil {
+			log.Println("Could not start firebase client")
+			return data
+		}
+		defer client.Close()
 		docs, err := client.GetAllDocuments(firebase_client.CollectionInvocationCounts)
 		if err != nil {
 			log.Printf("Could not fetch invocation counts from firestore")
@@ -105,6 +113,11 @@ func (t WithoutFirestore) GetAllInvocationCounts() map[string]int64 {
 func (p WithFirestore) GetAllInvocationRegistrations() map[string]types.InvocationRegistration {
 	result := map[string]types.InvocationRegistration{}
 	if client, err := firebase_client.NewFirebaseClient(); err == nil {
+		if err != nil {
+			log.Println("Could not start firebase client")
+			return result
+		}
+		defer client.Close()
 		docs, err := client.GetAllDocuments(firebase_client.CollectionInvocationRegistrations)
 		if err != nil {
 			log.Printf("Could not fetch data from firestore")
