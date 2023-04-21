@@ -14,7 +14,7 @@ func SetupRoutes(port string, s *State) *http.ServeMux {
 	mux.HandleFunc(RenewablesCurrentPath, s.EnergyCurrentHandler)
 	mux.HandleFunc(RenewablesHistoryPath, s.EnergyHistoryHandler)
 	mux.HandleFunc(NotificationsPath, s.NotificationHandler)
-	mux.HandleFunc(StatusPath, StatusHandler)
+	mux.HandleFunc(StatusPath, s.StatusHandler)
 
 	// Constructing the base domain name with the provided port
 	domainNamePort := "http://localhost:" + port
