@@ -9,7 +9,8 @@ import (
 )
 
 type Client struct {
-	URL *url.URL // url to perform requests on.
+	URL    *url.URL // url to perform requests on.
+	Header http.Header
 }
 
 // Construct a new instance of Client.
@@ -90,7 +91,7 @@ func (client *Client) Do(method string, reader io.Reader) (*http.Response, error
 	if e != nil {
 		return nil, e
 	}
-	r.Header.Set("Content-Type", "application/json")
+	r.Header = client.Header.Clone()
 
 	// instantiate client
 	c := &http.Client{}
@@ -115,6 +116,9 @@ func (client *Client) Post(body io.Reader) (*http.Response, error) {
 	if body == nil {
 		return nil, fmt.Errorf("client: body cannot be nil when performing POST request")
 	}
+
+	// set content type
+	client.Header.Set("Content-Type", "application/json")
 
 	return client.Do(http.MethodPost, body)
 }
