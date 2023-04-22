@@ -96,6 +96,18 @@ func HttpPostStatusCode(t *testing.T, url string, payload string) int {
 	return res.StatusCode
 }
 
+// HttpPostAndDecode returns the response of a POST request
+func HttpPostAndDecode(t *testing.T, url string, payload string, response any) int {
+	client := http.Client{}
+	defer client.CloseIdleConnections()
+	res, err := http.Post(url, "application/json", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal("Failed to send POST", err)
+	}
+	err = json.NewDecoder(res.Body).Decode(&response)
+	return res.StatusCode
+}
+
 // HttpDeleteStatusCode returns the statuscode of a DELETE request
 func HttpDeleteStatusCode(t *testing.T, url string, payload string) int {
 	client := http.Client{}
