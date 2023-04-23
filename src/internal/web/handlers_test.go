@@ -3,6 +3,7 @@ package web
 import (
 	"assignment2/internal/types"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,6 +32,7 @@ func TestEnergyDefaultHandler(t *testing.T) {
 }
 
 // TestEnergyCurrentHandler tests the EnergyCurrentHandler function.
+
 func TestEnergyCurrentHandler(t *testing.T) {
 	runTests := func(t *testing.T, s *State) {
 		server := httptest.NewServer(http.HandlerFunc(s.EnergyCurrentHandler))
@@ -86,6 +88,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 }
 
 // Tests the invalid Method for EnergyCurrentHandler
+
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 	s := NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{})
 	server := httptest.NewServer(http.HandlerFunc(s.EnergyHistoryHandler))
@@ -108,6 +111,7 @@ func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
 }
 
 // TestEnergyHistoryHandler tests the EnergyHistoryHandler function.
+
 func TestEnergyHistoryHandler(t *testing.T) {
 	runTests := func(t *testing.T, s *State) {
 		server := httptest.NewServer(http.HandlerFunc(s.EnergyHistoryHandler))
@@ -171,6 +175,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 }
 
 // Tests the invalid Method for EnergyHistoryHandler
+
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
 	s := NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{})
 	//server := httptest.NewServer(http.HandlerFunc(s.EnergyHistoryHandler))
@@ -201,7 +206,6 @@ func calculateAverage(dataList types.YearRecordList) float64 {
 	avg := sum / float64(len(dataList))
 	return avg
 }
-
 func TestNotificationHandler(t *testing.T) {
 	runTests := func(t *testing.T, s *State) {
 		server := httptest.NewServer(http.HandlerFunc(s.NotificationHandler))
@@ -357,5 +361,57 @@ func TestNotificationHandler(t *testing.T) {
 	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
 	if test_with_firestore {
 		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
+	}
+}
+
+// TestStatusHandler verifies the behavior of the StatusHandler function by testing
+// various scenarios, such as sending requests with different HTTP methods and
+// checking the expected values in the APIStatus struct.
+func TestStatusHandler(t *testing.T) {
+	runTests := func(t *testing.T, s *State) {
+		server := httptest.NewServer(http.HandlerFunc(s.StatusHandler))
+		defer server.Close()
+
+		var apiStatus APIStatus
+
+		// Test 1: Check if the APIStatus struct fields have expected values
+		HttpGetAndDecode(t, server.URL+StatusPath, &apiStatus)
+		if apiStatus.Countriesapi != http.StatusOK {
+			t.Errorf("Unexpected countries API status: got %v want %v", apiStatus.Countriesapi, http.StatusOK)
+		}
+		// Test 2: Testing whether a Bad Request error is returned when an unsupported HTTP method is used
+		statusCode1 := HttpPostStatusCode(t, server.URL+StatusPath, "")
+		if statusCode1 != http.StatusBadRequest {
+			t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusBadRequest, statusCode1)
+		}
+
+		// Test 3: Send a GET request to the StatusHandler with additional URL segments
+		resp, err := http.Get(server.URL + StatusPath + "/extra/segments")
+		if err != nil {
+			t.Fatalf("Error making GET request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusOK, resp.StatusCode)
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Error reading response body: %v", err)
+		}
+		expected := "Usage: energy/v1/status/"
+		if string(body) != expected {
+			t.Fatalf("Unexpected response body, expected: %s, got: %s", expected, string(body))
+		}
+
+	}
+
+	filePath := path.Join("res", types.CSVFilePath)
+	state1 := NewService(filePath, WithoutFirestore{})
+	runTests(t, state1)
+
+	if test_with_firestore {
+		state2 := NewService(filePath, WithFirestore{})
+		runTests(t, state2)
 	}
 }
