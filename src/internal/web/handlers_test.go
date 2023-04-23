@@ -25,9 +25,15 @@ func TestSetup(t *testing.T) {
 func TestEnergyDefaultHandler(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(DefaultHandler))
 	defer server.Close()
+	// Test 1: Send a GET request to the DefaultHandler
 	statusCode := HttpGetStatusCode(t, server.URL)
 	if statusCode != http.StatusInternalServerError {
 		t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusInternalServerError, statusCode)
+	}
+	//Test 2: Testing for use an invalid method: POST
+	statusCode2 := HttpPostStatusCode(t, server.URL, "")
+	if statusCode2 != http.StatusBadRequest {
+		t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusBadRequest, statusCode2)
 	}
 }
 
@@ -77,6 +83,12 @@ func TestEnergyCurrentHandler(t *testing.T) {
 		statusCode2 := HttpGetStatusCode(t, server.URL+RenewablesHistoryPath+"nor/swe")
 		if statusCode2 != http.StatusBadRequest {
 			t.Fatal("Wrong status code, expected: 400, got: ", statusCode2)
+		}
+		//
+		//Test 3: Testing for use an invalid method: POST
+		statusCode3 := HttpPostStatusCode(t, server.URL, "")
+		if statusCode3 != http.StatusBadRequest {
+			t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusBadRequest, statusCode3)
 		}
 	}
 
