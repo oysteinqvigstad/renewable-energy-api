@@ -503,7 +503,5 @@ The response contains the following information:
 
 The service is deployed on an IaaS solution OpenStack using Docker.
 
-URL to the deployed service:
-
-Source repository :
+**URL to the deployed service:** http://10.212.172.171/energy/v1/renewables/current/
 
