@@ -283,7 +283,7 @@ The initial endpoint focuses on returning historical percentages of renewables i
 ]
 ```
 
-### **Advanced Tasks:**
+### Advanced Tasks:
 
 **Request:**
 
@@ -371,7 +371,7 @@ The Notification Endpoint allows users to register webhooks that will be trigger
 
 ### Registration of Webhook
 
-    Method: POST`
+    Method: POST
 
 **Request:**
 
@@ -407,7 +407,7 @@ The response contains the unique ID for the registration, which can be used to v
 
 ### **Deletion of Webhook**
 
-`Method: DELETE`
+    Method: DELETE
 
 **Request**
 
@@ -475,9 +475,8 @@ TODO: no response body
 The Status Endpoint provides an overview of the health and status of various components within the service. It allows users to monitor the connectivity and functionality of external APIs, the Notification Database, and other aspects of the service.
 
 ### Request
-
-`Method: GET
-Path: energy/v1/status/`
+    Method: GET
+    Path: energy/v1/status/
 
 ### Response
 
@@ -493,12 +492,11 @@ The response contains the following information:
 
 ```
 {
-   "countries_api": "<http status code for *REST Countries API*>",
-   "notification_db": "<http status code for *Notification DB* in Firebase>",
-   ...
-   "webhooks": <number of registered webhooks>,
-   "version": "v1",
-   "uptime": <time in seconds from the last service restart>
+  "countries_api": 200,
+  "notification_db": 200,
+  "webhooks": 1,
+  "version": "v3.1",
+  "uptime": 11
 }
 ```
 # Deployment
