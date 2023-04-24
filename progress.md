@@ -39,15 +39,13 @@ These have all been implemented in our software.
 **Project specification details:** As an additional feature, users can register webhooks that are triggered by the service based on specified events, specifically if information about given countries (or any country) is invoked, where the minimum frequency can be specified. Users can register multiple webhooks. The registrations should survive a service restart (i.e., be persistent using a Firebase DB as backend). 
 
 **Mandatory**
-- Accept POST method on `/notifications/` for registration of webhooks ⚠️(1)
-- Accept DELETE method on `/notifications/{id}` for deletion of webhooks on ✅ (maybe status code 200 is better?)
+- Accept POST method on `/notifications/` for registration of webhooks ✅
+- Accept DELETE method on `/notifications/{id}` for deletion of webhooks on ✅
 - Accept GET method on `/notifications/{id}` for info about a single webhook ✅
 - Accept GET method on `/notifications/` to list all webhooks ✅
 
 **Advanced/optional:**
 - Consider adding different notification types
-
-**(1):** The response to the post request should be the webhook id of the newly created webhook registration. Currently it looks like it just responds with a list of all registrated webhooks, without adding a new one.
 
 ### Endpoint: /status/
 **Project specification details:** The status interface indicates the availability of all individual services this service depends on. These can be more services than the ones specified above (if you considered the advanced tasks). If you include more, you can specify additional keys with the suffix `api`. The reporting occurs based on status codes returned by the dependent services. The status interface further provides information about the number of registered webhooks (more details is provided in the next section), and the uptime of the service.
