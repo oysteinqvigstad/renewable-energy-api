@@ -1,6 +1,7 @@
 package web
 
 import (
+	"assignment2/api"
 	"assignment2/internal/firebase_client"
 	"assignment2/internal/types"
 	"errors"
@@ -15,7 +16,8 @@ type State struct {
 	db               types.RenewableDB
 	invocationCounts map[string]int64
 	registrations    map[string]types.InvocationRegistration
-	Mode             Mode
+	firestoreMode    firestoreMode
+	countriesAPIMode restCountriesMode
 	lock             sync.RWMutex
 	chInvocation     chan string
 	chRegistration   chan types.RegistrationAction
@@ -23,16 +25,17 @@ type State struct {
 }
 
 // NewService initializes a new State with the provided CSV filepath and mode.
-func NewService(filepath string, mode Mode) *State {
+func NewService(filepath string, countriesMode restCountriesMode, firebaseMode firestoreMode) *State {
 	s := State{
 		db:               types.ParseCSV(filepath),
-		invocationCounts: mode.GetAllInvocationCounts(),
-		registrations:    mode.GetAllInvocationRegistrations(),
-		Mode:             mode,
+		invocationCounts: firebaseMode.GetAllInvocationCounts(),
+		registrations:    firebaseMode.GetAllInvocationRegistrations(),
+		firestoreMode:    firebaseMode,
+		countriesAPIMode: countriesMode,
 	}
 
-	// Initialize channels and start the worker for updating Firebase in WithFirestore mode
-	switch mode.(type) {
+	// Initialize channels and start the worker for updating Firebase in WithFirestore firebaseMode
+	switch firebaseMode.(type) {
 	case WithFirestore:
 		s.chInvocation = make(chan string, 1000)
 		s.chRegistration = make(chan types.RegistrationAction, 10)
@@ -41,6 +44,26 @@ func NewService(filepath string, mode Mode) *State {
 	}
 
 	return &s
+}
+
+// WithoutFirestore represents a mode where the Firestore interaction is disabled.
+type WithoutFirestore struct{}
+
+// WithFirestore represents a mode where the Firestore interaction is enabled.
+type WithFirestore struct{}
+
+// StubRestCountries represents a mode where the Countries API is stubbed.
+type StubRestCountries struct{}
+
+// UseRestCountries represents a mode where the 3rd party API is used.
+type UseRestCountries struct{}
+
+// firestoreMode defines an interface for managing cache and invocation counts. Updates are handled
+// by channels and go routine instead.
+type firestoreMode interface {
+	GetCacheFromFirebase(url *url.URL) (types.YearRecordList, error)
+	GetAllInvocationCounts() map[string]int64
+	GetAllInvocationRegistrations() map[string]types.InvocationRegistration
 }
 
 // deleteRegistration removes a registration from the state's registrations map by its webhookID.
@@ -114,18 +137,35 @@ func (s *State) getInvocationCount(countryCode string) int64 {
 	return s.invocationCounts[countryCode]
 }
 
-// WithoutFirestore represents a mode where the Firestore interaction is disabled.
-type WithoutFirestore struct{}
+func (s *State) getCurrentRenewable(countryCode string, includeNeighbours bool) types.YearRecordList {
+	data := s.db.RetrieveLatest(countryCode)
+	if len(countryCode) > 0 && includeNeighbours {
+		neighbours, err := s.countriesAPIMode.getNeighboursCca(countryCode)
+		if err == nil {
+			for _, neighbour := range neighbours {
+				data = append(data, s.db.RetrieveLatest(neighbour)...)
+			}
+		}
+	}
+	return data
+}
 
-// WithFirestore represents a mode where the Firestore interaction is enabled.
-type WithFirestore struct{}
+// restCountriesMode defines an interface for either using the stubbed RESTCountries service or the
+// real 3rd party service
+type restCountriesMode interface {
+	getNeighboursCca(cca string) ([]string, error)
+}
 
-// Mode defines an interface for managing cache and invocation counts. Updates are handled
-// by channels and go routine instead.
-type Mode interface {
-	GetCacheFromFirebase(url *url.URL) (types.YearRecordList, error)
-	GetAllInvocationCounts() map[string]int64
-	GetAllInvocationRegistrations() map[string]types.InvocationRegistration
+// getNeighboursCca returns neighbouring list from stubbed country api
+func (t StubRestCountries) getNeighboursCca(cca string) ([]string, error) {
+	val, err := api.GetNeighboursCca(cca, api.STUB_BASE)
+	return val, err
+}
+
+// getNeighboursCca returns neighbouring list from 3rd party country api
+func (p UseRestCountries) getNeighboursCca(cca string) ([]string, error) {
+	val, err := api.GetNeighboursCca(cca, api.API_BASE)
+	return val, err
 }
 
 // GetCacheFromFirebase returns an error as caching is disabled in WithoutFirestore mode.

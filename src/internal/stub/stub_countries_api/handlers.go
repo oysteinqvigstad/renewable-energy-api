@@ -14,6 +14,7 @@ func StubHandler(data *JSONdata) func(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 
 			segments := utils.GetSegments(r.URL, StubServicePath)
+			fields, _ := utils.GetQueryLst(r.URL, "fields")
 
 			switch len(segments) {
 			case 1:
@@ -26,7 +27,7 @@ func StubHandler(data *JSONdata) func(w http.ResponseWriter, r *http.Request) {
 			case 2:
 				switch segments[0] {
 				case "alpha":
-					httpRespondJSON(w, data.filterByCCA3Code(segments[1]))
+					httpRespondJSON(w, data.filterByCCA3Code(segments[1], fields))
 				case "name":
 					httpRespondJSON(w, data.filterByName(segments[1]))
 				default:

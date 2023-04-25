@@ -1,7 +1,7 @@
 package stub_countries_api
 
 const (
-	StubServicePath = "/stub/"
+	StubServicePath = "/v3.1/"
 	JSONFileName    = "rest_countries.json"
 	StubServicePort = "8081"
 )
