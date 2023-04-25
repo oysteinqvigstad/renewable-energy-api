@@ -70,7 +70,8 @@ func TestEnergyCurrentHandler(t *testing.T) {
 		// Test 3: Verify that the API returns more than one neighboring country for Norway when the 'neighbours' query parameter is set to 'true'.
 		HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor?neighbours=true", &dataList)
 		if len(dataList) <= 1 {
-			t.Fatal("Expected more than 1 country, got : ", len(dataList))
+			t.Fatal("Expected more than 1 country, got :", len(dataList),
+				"Have you remembered to start the stub service at /cmd/stub/stub_countries_api.go ?")
 		}
 
 		// Status codes tests:

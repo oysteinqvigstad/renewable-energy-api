@@ -19,7 +19,7 @@ func main() {
 	log.Println(domainNamePort + stub_countries_api.StubServicePath)
 	log.Println("Supported queries:")
 	log.Println(domainNamePort + stub_countries_api.StubServicePath + "all/")
-	log.Println(domainNamePort + stub_countries_api.StubServicePath + "alpha/{cca3}")
+	log.Println(domainNamePort + stub_countries_api.StubServicePath + "alpha/{cca3}?fields=field1,field2")
 	log.Println(domainNamePort + stub_countries_api.StubServicePath + "name/{partial_name}")
 
 	log.Fatal(http.ListenAndServe(":"+port, handler))
