@@ -17,6 +17,6 @@ func main() {
 		port = "8080"
 	}
 	utils.ResetUptime()
-	s := web.NewService(path.Join("res", types.CSVFilePath), web.UseRestCountries{}, web.WithoutFirestore{})
+	s := web.NewService(path.Join("res", types.CSVFilePath), web.UseRestCountries{}, web.WithFirestore{})
 	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, s)))
 }
