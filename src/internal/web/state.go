@@ -6,39 +6,112 @@ import (
 	"errors"
 	"log"
 	"net/url"
+	"sync"
 	"time"
 )
 
 // State represents the application state and holds the necessary data and channels.
 type State struct {
-	DB               types.RenewableDB
-	InvocationCounts map[string]int64
-	Registrations    map[string]types.InvocationRegistration
+	db               types.RenewableDB
+	invocationCounts map[string]int64
+	registrations    map[string]types.InvocationRegistration
 	Mode             Mode
-	ChInvocation     chan string
-	ChRegistration   chan types.RegistrationAction
-	ChCache          chan map[string]types.YearRecordList
+	lock             sync.RWMutex
+	chInvocation     chan string
+	chRegistration   chan types.RegistrationAction
+	chCache          chan map[string]types.YearRecordList
 }
 
 // NewService initializes a new State with the provided CSV filepath and mode.
 func NewService(filepath string, mode Mode) *State {
 	s := State{
-		DB:               types.ParseCSV(filepath),
-		InvocationCounts: mode.GetAllInvocationCounts(),
-		Registrations:    mode.GetAllInvocationRegistrations(),
+		db:               types.ParseCSV(filepath),
+		invocationCounts: mode.GetAllInvocationCounts(),
+		registrations:    mode.GetAllInvocationRegistrations(),
 		Mode:             mode,
 	}
 
 	// Initialize channels and start the worker for updating Firebase in WithFirestore mode
 	switch mode.(type) {
 	case WithFirestore:
-		s.ChInvocation = make(chan string, 1000)
-		s.ChRegistration = make(chan types.RegistrationAction, 10)
-		s.ChCache = make(chan map[string]types.YearRecordList, 100)
+		s.chInvocation = make(chan string, 1000)
+		s.chRegistration = make(chan types.RegistrationAction, 10)
+		s.chCache = make(chan map[string]types.YearRecordList, 100)
 		go firebaseUpdateWorker(&s)
 	}
 
 	return &s
+}
+
+// deleteRegistration removes a registration from the state's registrations map by its webhookID.
+// If the registration is found, it is deleted and the deletion is updated in Firestore. If the
+// registration is not found, it returns an error.
+func (s *State) deleteRegistration(webhookID string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if registration, ok := s.registrations[webhookID]; ok {
+		delete(s.registrations, webhookID)
+		updateFirestore(s.chRegistration, types.RegistrationAction{Add: false, Registration: registration})
+		return nil
+	} else {
+		return errors.New("Could not find the webhookID: " + webhookID)
+	}
+}
+
+// getNumberOfRegistrations returns the number of registrations
+// currently stored in the state's registrations map.
+func (s *State) getNumberOfRegistrations() int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return len(s.registrations)
+}
+
+// getRegistration retrieves a registration from the state's registrations map by its webhookID.
+// If the registration is found, it returns the registration and true, otherwise, it returns an
+// empty registration object and false.
+func (s *State) getRegistration(webhookID string) (types.InvocationRegistration, bool) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	value, ok := s.registrations[webhookID]
+	return value, ok
+}
+
+// getAllRegistrations returns a slice of all registrations stored in the state's registrations map.
+func (s *State) getAllRegistrations() []types.InvocationRegistration {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	list := make([]types.InvocationRegistration, 0, len(s.registrations))
+	for _, value := range s.registrations {
+		list = append(list, value)
+	}
+	return list
+}
+
+// newRegistration adds a new registration to the state's registrations map and updates Firestore
+// with the new entry.
+func (s *State) newRegistration(registration types.InvocationRegistration) {
+	newEntry := types.RegistrationAction{Add: true, Registration: registration}
+	updateFirestore(s.chRegistration, newEntry)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.registrations[registration.WebhookID] = registration
+}
+
+// incrementInvocationCount increments the invocation count for a given countryCode and returns
+// the updated count. The invocation count is stored in the state's invocationCounts map.
+func (s *State) incrementInvocationCount(countryCode string) int64 {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.invocationCounts[countryCode]++
+	return s.invocationCounts[countryCode]
+}
+
+// getInvocationCount retrieves the invocation count for a given countryCode from the state's
+// invocationCounts map and returns the count.
+func (s *State) getInvocationCount(countryCode string) int64 {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.invocationCounts[countryCode]
 }
 
 // WithoutFirestore represents a mode where the Firestore interaction is disabled.

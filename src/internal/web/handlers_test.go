@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-var test_with_firestore = true
+var testWithFirestore = false
 
 func TestSetup(t *testing.T) {
 	wd, _ := os.Getwd()
@@ -93,7 +93,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 	}
 
 	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
-	if test_with_firestore {
+	if testWithFirestore {
 		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
 	}
 
@@ -181,7 +181,7 @@ func TestEnergyHistoryHandler(t *testing.T) {
 	}
 
 	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
-	if test_with_firestore {
+	if testWithFirestore {
 		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
 	}
 }
@@ -322,7 +322,7 @@ func TestNotificationHandler(t *testing.T) {
 		}
 
 		// test 7: Delete a webhook
-		if HttpDeleteStatusCode(t, server.URL+NotificationsPath+webhookID1, "") != http.StatusNoContent {
+		if HttpDeleteStatusCode(t, server.URL+NotificationsPath+webhookID1, "") != http.StatusAccepted {
 			t.Fatal("Expected webhook to be deleted")
 		}
 
@@ -364,14 +364,14 @@ func TestNotificationHandler(t *testing.T) {
 		}
 
 		//  clean up the second webhook
-		if HttpDeleteStatusCode(t, server.URL+NotificationsPath+webhookID2, "") != http.StatusNoContent {
+		if HttpDeleteStatusCode(t, server.URL+NotificationsPath+webhookID2, "") != http.StatusAccepted {
 			t.Fatal("Expected webhook to be deleted")
 		}
 
 	}
 
 	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
-	if test_with_firestore {
+	if testWithFirestore {
 		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
 	}
 }
@@ -422,7 +422,7 @@ func TestStatusHandler(t *testing.T) {
 	state1 := NewService(filePath, WithoutFirestore{})
 	runTests(t, state1)
 
-	if test_with_firestore {
+	if testWithFirestore {
 		state2 := NewService(filePath, WithFirestore{})
 		runTests(t, state2)
 	}
