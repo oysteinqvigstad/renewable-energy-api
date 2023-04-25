@@ -81,7 +81,7 @@ func updateFirestore[T any](channel chan T, data T) {
 func httpCacheAndRespondJSON(w http.ResponseWriter, url *url.URL, data types.YearRecordList, s *State) {
 	value := make(map[string]types.YearRecordList)
 	value[url.String()] = data
-	updateFirestore(s.ChCache, value)
+	updateFirestore(s.chCache, value)
 	httpRespondJSON(w, data, s)
 }
 

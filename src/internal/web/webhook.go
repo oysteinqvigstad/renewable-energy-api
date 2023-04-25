@@ -19,9 +19,9 @@ import (
 // and triggers webhooks accordingly.
 func ProcessWebhookByCountry(ccna3 []string, s *State) {
 	for _, code := range ccna3 {
-		s.InvocationCounts[code]++
-		updateFirestore(s.ChInvocation, code)
-		triggerWebhooksForCountry(code, s.InvocationCounts[code], s.DB.GetName(code), s)
+		newCount := s.incrementInvocationCount(code)
+		updateFirestore(s.chInvocation, code)
+		triggerWebhooksForCountry(code, newCount, s.db.GetName(code), s)
 	}
 }
 
@@ -44,7 +44,7 @@ func generateWebhookID(s *State) string {
 
 		// Check if the generated webhook ID already exists in the registrations map.
 		// If it doesn't exist (i.e., it's unique), break the loop and return the ID.
-		if _, ok := s.Registrations[string(b)]; !ok {
+		if _, ok := s.getRegistration(string(b)); !ok {
 			break
 		}
 	}
@@ -73,17 +73,17 @@ func firebaseUpdateWorker(s *State) {
 		select {
 		// If there's a new invocation count update, add it to the updates
 		// and set the Ready flag to indicate that updates are available
-		case countryCode := <-s.ChInvocation:
-			updates.InvocationCount[countryCode] = s.InvocationCounts[countryCode]
+		case countryCode := <-s.chInvocation:
+			updates.InvocationCount[countryCode] = s.getInvocationCount(countryCode)
 			updates.Ready = true
 
 		// If there's a new registration update, add it to the updates
 		// and set the Ready flag to indicate that updates are available
-		case action := <-s.ChRegistration:
+		case action := <-s.chRegistration:
 			updates.Registrations[action.Registration.WebhookID] = action
 			updates.Ready = true
 
-		case cache := <-s.ChCache:
+		case cache := <-s.chCache:
 			for key, value := range cache {
 				updates.Cache[key] = value
 			}
@@ -124,9 +124,7 @@ func registerWebhook(w http.ResponseWriter, r *http.Request, s *State) {
 	// adding registration to data structure and notifying firestore that the registration
 	// can be backup up
 	data.WebhookID = generateWebhookID(s)
-	newEntry := types.RegistrationAction{Add: true, Registration: data}
-	s.Registrations[data.WebhookID] = data
-	updateFirestore(s.ChRegistration, newEntry)
+	s.newRegistration(data)
 	w.WriteHeader(http.StatusCreated)
 	httpRespondJSON(w, map[string]interface{}{"webhook_id": data.WebhookID}, nil)
 }
@@ -147,7 +145,7 @@ func validateRegistrationData(registration types.InvocationRegistration, s *Stat
 
 	// Check if the country is recognized (i.e., if it exists in the invocationCount map).
 	// If not, return an error.
-	if _, ok := s.DB[registration.Country]; !ok {
+	if _, ok := s.db[registration.Country]; !ok {
 		return errors.New("country not recognized")
 	}
 
@@ -158,17 +156,13 @@ func validateRegistrationData(registration types.InvocationRegistration, s *Stat
 // listAllWebhooks is a function that retrieves all registered webhooks
 // and sends them as a JSON response to the client.
 func listAllWebhooks(w http.ResponseWriter, s *State) {
-	registrationList := make([]types.InvocationRegistration, 0, len(s.Registrations))
-	for _, registration := range s.Registrations {
-		registrationList = append(registrationList, registration)
-	}
-	httpRespondJSON(w, registrationList, nil)
+	httpRespondJSON(w, s.getAllRegistrations(), nil)
 }
 
-// listAllWebhooksByID is a function that retrieves a registered webhook by its ID
+// ListWebhooksByID is a function that retrieves a registered webhook by its ID
 // and sends it as a JSON response to the client if found, otherwise it sends an error.
-func listAllWebhooksByID(w http.ResponseWriter, webhookID string, s *State) {
-	if reg, ok := s.Registrations[webhookID]; ok {
+func ListWebhooksByID(w http.ResponseWriter, webhookID string, s *State) {
+	if reg, ok := s.getRegistration(webhookID); ok {
 		httpRespondJSON(w, reg, nil)
 		return
 	}
@@ -179,14 +173,12 @@ func listAllWebhooksByID(w http.ResponseWriter, webhookID string, s *State) {
 // If the webhook is found and deleted successfully, it sends a "No Content" status,
 // otherwise, it sends an error.
 func RemoveWebhookByID(w http.ResponseWriter, webhookID string, s *State) {
-	if record, ok := s.Registrations[webhookID]; ok {
-		delete(s.Registrations, webhookID)
-		update := types.RegistrationAction{Add: false, Registration: record}
-		updateFirestore(s.ChRegistration, update)
-		w.WriteHeader(http.StatusNoContent)
+	if err := s.deleteRegistration(webhookID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	} else {
+		w.WriteHeader(http.StatusAccepted)
 	}
-	http.Error(w, "Could not find the webhookID: "+webhookID, http.StatusBadRequest)
 }
 
 // triggerWebhooksForCountry is a function that iterates through all registered webhooks
@@ -197,7 +189,7 @@ func RemoveWebhookByID(w http.ResponseWriter, webhookID string, s *State) {
 // This is not the best way to handle webhooks, as it needs to check
 // every registration every time a country code is invoked.
 func triggerWebhooksForCountry(countrycode string, count int64, name string, s *State) {
-	for _, reg := range s.Registrations {
+	for _, reg := range s.getAllRegistrations() {
 		if reg.Country == countrycode {
 			if count > 0 && count%reg.Calls == 0 {
 				postToWebhook(reg.URL, WebhookResponse{

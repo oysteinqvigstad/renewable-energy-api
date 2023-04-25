@@ -44,9 +44,9 @@ func (s *State) EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 		switch len(segments) {
 		case 0:
 			// Return the latest data for all countries
-			httpCacheAndRespondJSON(w, r.URL, s.DB.GetLatest("", false), s)
+			httpCacheAndRespondJSON(w, r.URL, s.db.GetLatest("", false), s)
 		case 1:
-			returnData := s.DB.GetLatest(segments[0], neighbours == "true")
+			returnData := s.db.GetLatest(segments[0], neighbours == "true")
 			switch len(returnData) {
 			case 0:
 				// Return the latest data for a specific country
@@ -82,10 +82,10 @@ func (s *State) EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		switch len(segments) {
 		case 0:
 			// Return the historical average data for all countries
-			httpCacheAndRespondJSON(w, r.URL, s.DB.GetHistoricAvg(begin, end, sort == "true"), s)
+			httpCacheAndRespondJSON(w, r.URL, s.db.GetHistoricAvg(begin, end, sort == "true"), s)
 		case 1:
 			// Return the historical data for a specific country
-			returnData := s.DB.GetHistoric(segments[0], begin, end, sort == "true")
+			returnData := s.db.GetHistoric(segments[0], begin, end, sort == "true")
 			if len(returnData) > 0 {
 				httpCacheAndRespondJSON(w, r.URL, returnData, s)
 			} else {
@@ -112,7 +112,7 @@ func (s *State) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 			listAllWebhooks(w, s)
 		case 1:
 			// List a specific webhook by its ID
-			listAllWebhooksByID(w, segments[0], s)
+			ListWebhooksByID(w, segments[0], s)
 		default:
 			http.Error(w, "Usage: "+NotificationsPath+"{?webhook_id}", http.StatusBadRequest)
 		}
@@ -175,7 +175,7 @@ func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 					notificationDBStatus = http.StatusInternalServerError
 					return
 				} else {
-					// Set the Notification DB status to OK if no error
+					// Set the Notification db status to OK if no error
 					notificationDBStatus = http.StatusOK
 				}
 			case WithoutFirestore:
@@ -184,11 +184,11 @@ func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Create a struct to hold the API status information
 			allAPI := APIStatus{
-				Countriesapi:    resp.StatusCode,      // HTTP status code for *REST Countries API*
-				Notification_db: notificationDBStatus, // HTTP status code for *Notification DB* in Firebase
-				Webhooks:        len(s.Registrations), // Number of registered webhooks
-				Version:         api.API_VERSION,      // API version
-				Uptime:          uptime,               // Uptime in seconds since the last service restart
+				Countriesapi:    resp.StatusCode,              // HTTP status code for *REST Countries API*
+				Notification_db: notificationDBStatus,         // HTTP status code for *Notification db* in Firebase
+				Webhooks:        s.getNumberOfRegistrations(), // Number of registered webhooks
+				Version:         api.API_VERSION,              // API version
+				Uptime:          uptime,                       // Uptime in seconds since the last service restart
 			}
 			// Set the response content type to JSON
 			w.Header().Set("Content-Type", "application/json")
