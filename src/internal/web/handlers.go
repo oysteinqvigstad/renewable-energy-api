@@ -2,11 +2,9 @@ package web
 
 import (
 	"assignment2/api"
-	"assignment2/internal/firebase_client"
 	"assignment2/internal/utils"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -151,44 +149,20 @@ func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 		case 0:
 			// Define the countries API URL
 			countriesAPI := api.API_BASE + api.API_VERSION + "/" + "all"
-			// Send a request to the countries API
-			resp, err := http.Get(countriesAPI)
+			// Get the status code of the countries API using the getStatusCode function
+			countriesStatusCode, err := getStatusCode(countriesAPI)
 			if err != nil {
 				// Handle any error from the countries API request
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			// Safely close the response body and log any errors that occur
-			if err := resp.Body.Close(); err != nil {
-				log.Printf("Error closing response body: %v", err)
-			}
-
-			// Create a Firebase client to get registered webhooks
-			var notificationDBStatus int
-			switch s.Mode.(type) {
-			case WithFirestore:
-				client, err := firebase_client.NewFirebaseClient()
-				defer client.Close()
-				if err != nil {
-					// Handle any error from the Firebase client
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					notificationDBStatus = http.StatusInternalServerError
-					return
-				} else {
-					// Set the Notification db status to OK if no error
-					notificationDBStatus = http.StatusOK
-				}
-			case WithoutFirestore:
-				notificationDBStatus = http.StatusServiceUnavailable
-			}
-
 			// Create a struct to hold the API status information
 			allAPI := APIStatus{
-				Countriesapi:    resp.StatusCode,              // HTTP status code for *REST Countries API*
-				Notification_db: notificationDBStatus,         // HTTP status code for *Notification db* in Firebase
-				Webhooks:        s.getNumberOfRegistrations(), // Number of registered webhooks
-				Version:         api.API_VERSION,              // API version
-				Uptime:          uptime,                       // Uptime in seconds since the last service restart
+				Countriesapi:    countriesStatusCode,              // HTTP status code for *REST Countries API*
+				Notification_db: s.Mode.GetNotificationDBStatus(), // HTTP status code for *Notification DB* in Firebase
+				Webhooks:        s.getNumberOfRegistrations(),     // Number of registered webhooks
+				Version:         api.API_VERSION,                  // API version
+				Uptime:          uptime,                           // Uptime in seconds since the last service restart
 			}
 			// Set the response content type to JSON
 			w.Header().Set("Content-Type", "application/json")

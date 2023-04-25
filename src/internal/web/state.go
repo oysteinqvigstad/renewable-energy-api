@@ -5,6 +5,7 @@ import (
 	"assignment2/internal/types"
 	"errors"
 	"log"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -126,6 +127,26 @@ type Mode interface {
 	GetCacheFromFirebase(url *url.URL) (types.YearRecordList, error)
 	GetAllInvocationCounts() map[string]int64
 	GetAllInvocationRegistrations() map[string]types.InvocationRegistration
+	GetNotificationDBStatus() int
+}
+
+// GetNotificationDBStatus for WithFirestore type returns Notification DB status code.
+// It handles client creation errors and returns appropriate status codes.
+func (p WithFirestore) GetNotificationDBStatus() int {
+	client, err := firebase_client.NewFirebaseClient()
+	defer client.Close()
+	if err != nil {
+		// Handle any error from the Firebase client
+		return http.StatusInternalServerError
+	}
+	// Set the Notification DB status to OK if no error
+	return http.StatusOK
+}
+
+// GetNotificationDBStatus for WithoutFirestore type returns a
+// service unavailable status code, as Notification DB isn't used in this mode.
+func (t WithoutFirestore) GetNotificationDBStatus() int {
+	return http.StatusServiceUnavailable
 }
 
 // GetCacheFromFirebase returns an error as caching is disabled in WithoutFirestore mode.
