@@ -31,7 +31,7 @@ func (s *State) EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 
 		// Checking cache first
-		if cache, err := s.Mode.GetCacheFromFirebase(r.URL); err == nil {
+		if cache, err := s.firestoreMode.GetCacheFromFirebase(r.URL); err == nil {
 			httpRespondJSON(w, cache, s)
 			return
 		}
@@ -42,9 +42,9 @@ func (s *State) EnergyCurrentHandler(w http.ResponseWriter, r *http.Request) {
 		switch len(segments) {
 		case 0:
 			// Return the latest data for all countries
-			httpCacheAndRespondJSON(w, r.URL, s.db.GetLatest("", false), s)
+			httpCacheAndRespondJSON(w, r.URL, s.getCurrentRenewable("", false), s)
 		case 1:
-			returnData := s.db.GetLatest(segments[0], neighbours == "true")
+			returnData := s.getCurrentRenewable(segments[0], neighbours == "true")
 			switch len(returnData) {
 			case 0:
 				// Return the latest data for a specific country
@@ -67,7 +67,7 @@ func (s *State) EnergyHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 
 		// Check cache first
-		if cache, err := s.Mode.GetCacheFromFirebase(r.URL); err == nil {
+		if cache, err := s.firestoreMode.GetCacheFromFirebase(r.URL); err == nil {
 			httpRespondJSON(w, cache, s)
 			return
 		}
@@ -156,6 +156,30 @@ func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			// Safely close the response body and log any errors that occur
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Error closing response body: %v", err)
+			}
+
+			// Create a Firebase client to get registered webhooks
+			var notificationDBStatus int
+			switch s.firestoreMode.(type) {
+			case WithFirestore:
+				client, err := firebase_client.NewFirebaseClient()
+				defer client.Close()
+				if err != nil {
+					// Handle any error from the Firebase client
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					notificationDBStatus = http.StatusInternalServerError
+					return
+				} else {
+					// Set the Notification db status to OK if no error
+					notificationDBStatus = http.StatusOK
+				}
+			case WithoutFirestore:
+				notificationDBStatus = http.StatusServiceUnavailable
+			}
+
 			// Create a struct to hold the API status information
 			allAPI := APIStatus{
 				Countriesapi:    countriesStatusCode,              // HTTP status code for *REST Countries API*

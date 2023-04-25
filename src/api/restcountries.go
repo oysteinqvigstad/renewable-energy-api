@@ -6,6 +6,7 @@ import (
 
 const (
 	API_BASE      = "http://129.241.150.113:8080/"
+	STUB_BASE     = "http://localhost:8081/"
 	API_VERSION   = "v3.1"
 	ENDPOINT_NAME = "name"
 	ENDPOINT_CCA  = "alpha"
@@ -42,10 +43,10 @@ func GetNeighbours(name string) ([]string, error) {
 
 // GetNeighboursCca takes a cca3 code and returns
 // an array of cca3 codes for bordering countries.
-func GetNeighboursCca(cca string) ([]string, error) {
+func GetNeighboursCca(cca string, baseURL string) ([]string, error) {
 	// Instantiate client
 	cl := web_client.NewClient()
-	err := cl.SetURL(API_BASE, API_VERSION, ENDPOINT_CCA, cca)
+	err := cl.SetURL(baseURL, API_VERSION, ENDPOINT_CCA, cca)
 	if err != nil {
 		return nil, err
 	}

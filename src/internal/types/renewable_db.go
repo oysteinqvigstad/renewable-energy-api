@@ -1,7 +1,6 @@
 package types
 
 import (
-	"assignment2/api"
 	"encoding/csv"
 	"io"
 	"log"
@@ -69,22 +68,25 @@ func ParseCSV(filepath string) RenewableDB {
 	return db
 }
 
+/*
 // GetLatest retrieves the latest energy data for a single country, and returns
 // it as a list of structs. If the `includeNeighbours` flag has been set, then the energy data
 // for the country's neighbour will be appended to the list
 func (db *RenewableDB) GetLatest(countryName string, includeNeighbours bool) YearRecordList {
-	data := db.retrieveLatest(countryName)
+	data := db.RetrieveLatest(countryName)
 	// adding neighbours if applicable
 	if len(countryName) > 0 && includeNeighbours {
 		neighbours, err := api.GetNeighboursCca(countryName)
 		if err == nil {
 			for _, neighbour := range neighbours {
-				data = append(data, db.retrieveLatest(neighbour)...)
+				data = append(data, db.RetrieveLatest(neighbour)...)
 			}
 		}
 	}
 	return data
 }
+
+*/
 
 // GetHistoricAvg will calculate the average renewable energy percentage for all stub_countries_api.
 // If a year range is specified then it will only calculate the average for those years,
@@ -162,9 +164,9 @@ func (db *RenewableDB) insert(record []string) {
 	}
 }
 
-// retrieveLatest gets the newest data on record for a specific country
+// RetrieveLatest gets the newest data on record for a specific country
 // if an empty string is given then all stub_countries_api should be returned
-func (db *RenewableDB) retrieveLatest(countryCode string) YearRecordList {
+func (db *RenewableDB) RetrieveLatest(countryCode string) YearRecordList {
 	var data YearRecordList
 
 	// check if all stub_countries_api should be retrieved

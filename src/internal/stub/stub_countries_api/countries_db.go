@@ -2,6 +2,7 @@ package stub_countries_api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -34,18 +35,30 @@ func ParseJSON(filepath string) JSONdata {
 }
 
 // filterByCCA3Code will return the country matching the 3-letter country code
-func (data *JSONdata) filterByCCA3Code(countryCode string) JSONdata {
-	filteredJSON := JSONdata{}
+func (data *JSONdata) filterByCCA3Code(countryCode string, fields []string) interface{} {
+	//filteredJSON := JSONdata{}
 	countryCode = strings.ToUpper(countryCode)
 	for _, each := range *data {
 		if country, ok := each.(map[string]interface{}); ok {
 			if cca3, ok := country["cca3"].(string); ok {
 				if cca3 == countryCode {
-					filteredJSON = append(filteredJSON, country)
+					if len(fields) > 0 {
+						filteredJSON := make(map[string]interface{})
+						fmt.Println(fields)
+						for _, field := range fields {
+							if record, ok := country[field].(interface{}); ok {
+								filteredJSON[field] = record
+							}
+						}
+						return filteredJSON
+					} else {
+						return append([]interface{}{}, country)
+					}
 				}
 			}
 		}
 	}
+	var filteredJSON []interface{}
 	return filteredJSON
 }
 

@@ -14,9 +14,9 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		log.Println("$PORT has not been set. Default: 8080")
-		port = "8080" // TODO: use const
+		port = "8080"
 	}
 	utils.ResetUptime()
-	s := web.NewService(path.Join("res", types.CSVFilePath), web.WithFirestore{})
+	s := web.NewService(path.Join("res", types.CSVFilePath), web.UseRestCountries{}, web.WithFirestore{})
 	log.Fatal(http.ListenAndServe(":"+port, web.SetupRoutes(port, s)))
 }

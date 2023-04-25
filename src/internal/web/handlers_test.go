@@ -13,7 +13,9 @@ import (
 	"testing"
 )
 
-var testWithFirestore = false
+const (
+	testWithFirestore = false
+)
 
 func TestSetup(t *testing.T) {
 	wd, _ := os.Getwd()
@@ -68,7 +70,8 @@ func TestEnergyCurrentHandler(t *testing.T) {
 		// Test 3: Verify that the API returns more than one neighboring country for Norway when the 'neighbours' query parameter is set to 'true'.
 		HttpGetAndDecode(t, server.URL+RenewablesCurrentPath+"nor?neighbours=true", &dataList)
 		if len(dataList) <= 1 {
-			t.Fatal("Expected more than 1 country, got : ", len(dataList))
+			t.Fatal("Expected more than 1 country, got :", len(dataList),
+				"Have you remembered to start the stub service at /cmd/stub/stub_countries_api.go ?")
 		}
 
 		// Status codes tests:
@@ -92,9 +95,9 @@ func TestEnergyCurrentHandler(t *testing.T) {
 		}
 	}
 
-	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
+	runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithoutFirestore{}))
 	if testWithFirestore {
-		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
+		runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithFirestore{}))
 	}
 
 }
@@ -102,7 +105,7 @@ func TestEnergyCurrentHandler(t *testing.T) {
 // Tests the invalid Method for EnergyCurrentHandler
 
 func TestEnergyCurrentHandler_InvalidMethod(t *testing.T) {
-	s := NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{})
+	s := NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithoutFirestore{})
 	server := httptest.NewServer(http.HandlerFunc(s.EnergyHistoryHandler))
 	defer server.Close()
 	// Test: Send a POST request to the EnergyHistoryHandler
@@ -180,16 +183,16 @@ func TestEnergyHistoryHandler(t *testing.T) {
 		}
 	}
 
-	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
+	runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithoutFirestore{}))
 	if testWithFirestore {
-		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
+		runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithFirestore{}))
 	}
 }
 
 // Tests the invalid Method for EnergyHistoryHandler
 
 func TestEnergyHistoryHandler_InvalidMethod(t *testing.T) {
-	s := NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{})
+	s := NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithoutFirestore{})
 	//server := httptest.NewServer(http.HandlerFunc(s.EnergyHistoryHandler))
 	server := httptest.NewServer(SetupRoutes("8081", s))
 	defer server.Close()
@@ -301,7 +304,7 @@ func TestNotificationHandler(t *testing.T) {
 		}
 
 		// test 5: Show all webhook registrations
-		switch s.Mode.(type) {
+		switch s.firestoreMode.(type) {
 		case WithFirestore:
 			HttpGetAndDecode(t, server.URL+NotificationsPath, &multiResponse)
 			if len(multiResponse) < 2 {
@@ -370,9 +373,9 @@ func TestNotificationHandler(t *testing.T) {
 
 	}
 
-	runTests(t, NewService(path.Join("res", types.CSVFilePath), WithoutFirestore{}))
+	runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithoutFirestore{}))
 	if testWithFirestore {
-		runTests(t, NewService(path.Join("res", types.CSVFilePath), WithFirestore{}))
+		runTests(t, NewService(path.Join("res", types.CSVFilePath), StubRestCountries{}, WithFirestore{}))
 	}
 }
 
@@ -419,11 +422,11 @@ func TestStatusHandler(t *testing.T) {
 	}
 
 	filePath := path.Join("res", types.CSVFilePath)
-	state1 := NewService(filePath, WithoutFirestore{})
+	state1 := NewService(filePath, StubRestCountries{}, WithoutFirestore{})
 	runTests(t, state1)
 
 	if testWithFirestore {
-		state2 := NewService(filePath, WithFirestore{})
+		state2 := NewService(filePath, StubRestCountries{}, WithFirestore{})
 		runTests(t, state2)
 	}
 }

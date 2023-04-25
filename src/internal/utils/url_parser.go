@@ -29,6 +29,16 @@ func GetQueryStr(url *url.URL, name string) (string, error) {
 	return "", errors.New("could not find key")
 }
 
+// GetQueryLst returns the value of a query key as list of strings
+func GetQueryLst(url *url.URL, name string) ([]string, error) {
+	str, err := GetQueryStr(url, name)
+	if err != nil {
+		return []string{}, err
+	} else {
+		return strings.Split(str, ","), nil
+	}
+}
+
 // GetQueryInt returns the value of a query key as an integer
 func GetQueryInt(url *url.URL, name string) (int, error) {
 	value, err := GetQueryStr(url, name)
