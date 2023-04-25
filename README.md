@@ -313,6 +313,37 @@ The initial endpoint focuses on returning historical percentages of renewables i
   }
 ]
 ```
+**Request:**
+
+`/energy/v1/renewables/history/?begin=1960&end=2000`
+
+**Response**
+```
+[
+  {
+    "name": "Algeria",
+    "isoCode": "DZA",
+    "percentage": 1.3703186058888892
+  },
+  {
+    "name": "Argentina",
+    "isoCode": "ARG",
+    "percentage": 7.4716496
+  },
+  {
+    "name": "Australia",
+    "isoCode": "AUS",
+    "percentage": 4.910349591666669
+  },
+  {
+    "name": "Austria",
+    "isoCode": "AUT",
+    "percentage": 27.5290
+  }
+	...
+]
+```
+
 
 **Request:**
 
