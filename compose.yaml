@@ -1,0 +1,8 @@
+services:
+  apiserver:
+    build: ./src/
+    volumes:
+      - ./secret_key.json:/go/src/app/secret_key.json
+    ports:
+      - '8080:8080'
+    
