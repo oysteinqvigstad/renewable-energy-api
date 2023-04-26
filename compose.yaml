@@ -5,4 +5,4 @@ services:
       - ./secret_key.json:/go/src/app/secret_key.json
     ports:
       - '8080:8080'
-    
+    restart: on-failure
