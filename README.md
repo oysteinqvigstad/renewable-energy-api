@@ -1,13 +1,20 @@
+# Group 69 - Assignment 2
 
 
-                                    __   ___  
-      __ _ _ __ ___  _   _ _ __    / /_ / _ \
-     / _` | '__/ _ \| | | | '_ \  | '_ \ (_) |
-    | (_| | | | (_) | |_| | |_) | | (_) \__, |
-     \__, |_|  \___/ \__,_| .__/   \___/  /_/
-     |___/                |_|
-    
-     Transforming Code, One Upside-Down Innovation at a Time
+
+## Project status
+
+Currently in development
+
+## Roadmap
+
+See [milestones](https://git.gvk.idi.ntnu.no/course/prog2005/prog2005-2023-workspace/idarmy/project-group69/-/milestones/1#tab-issues)
+
+## Contributers
+
+* Idar Løkset Mykløy
+* Aksel Matashev
+* Øystein Qvigstad
 
 
 
@@ -70,22 +77,6 @@
 
 
 
-## Project status
-
-Currently in development
-
-## Roadmap
-
-See [milestones](https://git.gvk.idi.ntnu.no/course/prog2005/prog2005-2023-workspace/idarmy/project-group69/-/milestones/1#tab-issues)
-
-## Contributers
-
-* Idar Løkset Mykløy
-* Aksel Matashev
-* Øystein Qvigstad
-
-# Assignment 2
-
 # Project overview
 
 Our team has been assigned the task of creating a REST web application using Golang. The primary objective of this application is to offer clients access to information on renewable energy production developments within and across countries. We will achieve this goal by utilizing an existing web service in combination with our own data-centric web service, which will involve creating endpoints to expose our service. Additionally, our application will allow clients to register notifications using webhooks. The application will be dockerized, and we will deploy it using an IaaS system.
@@ -98,6 +89,8 @@ We successfully deployed the final web service on our local OpenStack instance, 
 
 Throughout this project, we familiarized ourselves with various technologies introduced as part of the course, ensuring a smooth development process. We actively participated in or reviewed the lectures to understand these technologies.
 
+
+
 # Endpoints
 
 Our web service will have four resource root paths:
@@ -106,6 +99,8 @@ Our web service will have four resource root paths:
 - `/energy/v1/renewables/history`
 - `/energy/v1/notifications/`
 - `/energy/v1/status/`
+
+
 
 ## 1. Endpoint: Current percentage of renewables
 
@@ -196,6 +191,8 @@ This endpoint focuses on returning the latest percentages of renewables in the e
     ...
 ]
 ```
+
+
 ## 2. Endpoint: Historical percentages of renewables
 
 The initial endpoint focuses on returning historical percentages of renewables in the energy mix, including individual levels, as well as mean values for individual or selections of countries.
@@ -398,7 +395,7 @@ The initial endpoint focuses on returning historical percentages of renewables i
 ```
 ## 3. Endpoint: Notification
 
-The Notification Endpoint allows users to register webhooks that will be triggered based on specified events. Webhooks can be registered for specific countries or for any country. The minimum frequency can be specified for webhook triggers. Users can register multiple webhooks, and webhook registrations are persistent, surviving service restarts through the use of a Firebase DB as backend.
+The Notification Endpoint allows users to register webhooks that will be triggered when the country specified is requested every n (specified in `calls=n`) number of times. The minimum frequency that can be specified is 1. Users can register multiple webhooks, and webhook registrations are persistent, surviving service restarts through the use of a Firebase DB as backend.
 
 ### Registration of Webhook
 
@@ -448,9 +445,9 @@ The response contains the unique ID for the registration, which can be used to v
 
 **Response**
 
-The response should be implemented according to best practices.
+Per RFC 7231 guidelines, the server provides a `202 Accepted` status code in response to a probable successful deletion request.
 
-TODO: no response body
+Upon removing a valid webhook ID, it is instantly eliminated from the server. Nonetheless, due to the periodic bulk updates by the firebase worker, confirming the deletion within the persistent system and preventing response delays becomes complex. As a result, the server replies with `202 Accepted` rather than `200 Ok`. It accurately communicates that the server has accepted the request but  hasn't completed the action yet, as there might be some delay or uncertainty in the process due to the periodic updates by the firebase worker.
 
 ### View registered webhook
 
@@ -526,13 +523,28 @@ The response contains the following information:
   "countries_api": 200,
   "notification_db": 200,
   "webhooks": 1,
-  "version": "v3.1",
+  "version": "v1",
   "uptime": 11
 }
 ```
+
+
 # Deployment
 
 The service is deployed on an IaaS solution OpenStack using Docker.
 
-**URL to the deployed service:** http://10.212.172.171/energy/v1/renewables/current/
+**URL to the deployed service:** http://10.212.172.171:8080/energy/v1/
 
+
+
+## Automated testing
+
+The project consists of unit and integration tests. To separate the tests from third-party services, ensure the stubbing service for the REST countries API is initiated on port 8081:
+
+> go run ./cmd/stub/stub_countries_api.go
+
+Once the stubbing service is active, initiate the automated tests using this command:
+
+> go test ./...
+
+By default, tests will execute without the firebase worker. To override this, modify the `testWithFirebase` boolean in `./internal/web/handlers_test.go`. However, this also requires the presence of an authentication key for the tests to pass.
