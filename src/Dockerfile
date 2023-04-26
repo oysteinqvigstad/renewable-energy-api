@@ -7,7 +7,7 @@ LABEL maintainer="oysteinq@stud.ntnu.no"
 #COPY ./internal /go/src/app/internal
 #COPY ./res /go/src/app/res
 #COPY ./go.mod /go/src/app/go.mod
-COPY ./* /go/src/app/
+COPY . /go/src/app/
 
 # Set working directory
 WORKDIR /go/src/app/
