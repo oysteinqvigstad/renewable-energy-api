@@ -1,7 +1,8 @@
 package web
 
 const (
-	DefaultPath           = "/energy/v1/"
+	Version               = "v1"
+	DefaultPath           = "/energy/" + Version + "/"
 	RenewablesCurrentPath = DefaultPath + "renewables/current/"
 	RenewablesHistoryPath = DefaultPath + "renewables/history/"
 	NotificationsPath     = DefaultPath + "notifications/"
