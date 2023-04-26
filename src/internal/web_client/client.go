@@ -10,12 +10,12 @@ import (
 
 type Client struct {
 	URL    *url.URL // url to perform requests on.
-	Header http.Header
+	header http.Header
 }
 
 // Construct a new instance of Client.
 func NewClient() *Client {
-	return &Client{URL: &url.URL{}}
+	return &Client{URL: &url.URL{}, header: http.Header{}}
 }
 
 // Sends request and returns status code.
@@ -91,7 +91,7 @@ func (client *Client) Do(method string, reader io.Reader) (*http.Response, error
 	if e != nil {
 		return nil, e
 	}
-	r.Header = client.Header.Clone()
+	r.Header = client.header.Clone()
 
 	// instantiate client
 	c := &http.Client{}
@@ -118,7 +118,8 @@ func (client *Client) Post(body io.Reader) (*http.Response, error) {
 	}
 
 	// set content type
-	client.Header.Set("Content-Type", "application/json")
+	client.header.Set("Content-Type", "application/json")
+	defer client.header.Del("Content-Type")
 
 	return client.Do(http.MethodPost, body)
 }
