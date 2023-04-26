@@ -407,16 +407,16 @@ func TestStatusHandler(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusOK, resp.StatusCode)
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusBadRequest, resp.StatusCode)
 		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatalf("Error reading response body: %v", err)
 		}
-		expected := "Usage: energy/v1/status/"
+		expected := "Usage: energy/v1/status/\n"
 		if string(body) != expected {
-			t.Fatalf("Unexpected response body, expected: %s, got: %s", expected, string(body))
+			t.Fatalf("Unexpected response body, expected: [%s], got: [%s]", expected, string(body))
 		}
 
 	}

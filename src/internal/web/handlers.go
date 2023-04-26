@@ -3,8 +3,6 @@ package web
 import (
 	"assignment2/api"
 	"assignment2/internal/utils"
-	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -147,41 +145,21 @@ func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		switch len(segments) {
 		case 0:
-			// Define the countries API URL
-			countriesAPI := api.API_BASE + api.API_VERSION + "/" + "all"
 			// Get the status code of the countries API using the getStatusCode function
-			countriesStatusCode, err := getStatusCode(countriesAPI)
-			if err != nil {
-				// Handle any error from the countries API request
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			countriesStatusCode, _ := getStatusCode(api.API_BASE + api.API_VERSION + "/alpha/" + "nor")
 
 			// Create a struct to hold the API status information
-			allAPI := APIStatus{
+			httpRespondJSON(w, APIStatus{
 				Countriesapi:    countriesStatusCode,                       // HTTP status code for *REST Countries API*
 				Notification_db: s.firestoreMode.GetNotificationDBStatus(), // HTTP status code for *Notification DB* in Firebase
 				Webhooks:        s.getNumberOfRegistrations(),              // Number of registered webhooks
-				Version:         api.API_VERSION,                           // API version
+				Version:         Version,                                   // API version
 				Uptime:          uptime,                                    // Uptime in seconds since the last service restart
-			}
-			// Set the response content type to JSON
-			w.Header().Set("Content-Type", "application/json")
-			// Encode and return the API status as JSON, handling any errors that occur during encoding
-			if err := json.NewEncoder(w).Encode(allAPI); err != nil {
-				http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
-			}
+			}, s)
 
 		default:
 			// Handle any other cases with URL segments
-			w.Header().Set("content-type", "text/html")
-			output := "Usage: energy/v1/status/"
-			_, err := fmt.Fprintf(w, "%v", output)
-			if err != nil {
-				// Handle any error when returning the output
-				http.Error(w, "Error when returning output", http.StatusInternalServerError)
-			}
-			return
+			http.Error(w, "Usage: energy/v1/status/", http.StatusBadRequest)
 		}
 	default:
 		// Handle any unsupported HTTP methods
