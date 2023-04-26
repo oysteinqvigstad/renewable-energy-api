@@ -12,6 +12,12 @@ COPY . /go/src/app/
 # Set working directory
 WORKDIR /go/src/app/
 
+# Make secret_key.json file
+# When mounting a volume to a non-existent file,
+# Docker will make a directory by default.
+# This command is a workaround for that issue.
+RUN touch secret_key.json
+
 # Build project
 RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' ./cmd/app/main.go
 
