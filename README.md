@@ -535,6 +535,14 @@ The service is deployed on an IaaS solution OpenStack using Docker.
 
 **URL to the deployed service:** http://10.212.172.171:8080/energy/v1/
 
+The service can also be deployed locally using the provided docker compose file.
+For the local instance to work, a firebase secret key must be placed in the root folder of the project, and named `secret_key.json`.
+
+Once the secret is provided, the service can be run with this command:
+```sh
+sudo docker compose up -d
+```
+
 
 
 ## Automated testing
