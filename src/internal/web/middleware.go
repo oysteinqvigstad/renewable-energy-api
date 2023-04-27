@@ -3,7 +3,6 @@ package web
 import (
 	"assignment2/internal/types"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -125,12 +124,12 @@ func HttpDeleteStatusCode(t *testing.T, url string, payload string) int {
 }
 
 // getStatusCode returns the statuscode of a GET request
-func getStatusCode(url string) (int, error) {
+func getStatusCode(url string) int {
 	client := http.Client{}
 	defer client.CloseIdleConnections()
 	res, err := client.Get(url)
 	if err != nil {
-		return 0, fmt.Errorf("Get request to URL failed: %v", err)
+		return http.StatusServiceUnavailable
 	}
-	return res.StatusCode, nil
+	return res.StatusCode
 }
