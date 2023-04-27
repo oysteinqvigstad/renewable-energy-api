@@ -29,8 +29,8 @@ func TestEnergyDefaultHandler(t *testing.T) {
 	defer server.Close()
 	// Test 1: Send a GET request to the DefaultHandler
 	statusCode := HttpGetStatusCode(t, server.URL)
-	if statusCode != http.StatusInternalServerError {
-		t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusInternalServerError, statusCode)
+	if statusCode != http.StatusBadRequest {
+		t.Fatalf("Wrong status code, expected: %d, got: %d", http.StatusBadRequest, statusCode)
 	}
 	//Test 2: Testing for use an invalid method: POST
 	statusCode2 := HttpPostStatusCode(t, server.URL, "")
