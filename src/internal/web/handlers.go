@@ -1,7 +1,6 @@
 package web
 
 import (
-	"assignment2/api"
 	"assignment2/internal/utils"
 	"net/http"
 )
@@ -15,7 +14,7 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 				"/energy/v1/renewables/history/{country?}{?begin=year&end=year?}{?sortByValue=bool?}\n" +
 				"/energy/v1/notifications\n" +
 				"/energy/v1/status\n"
-			http.Error(w, info, http.StatusInternalServerError)
+			http.Error(w, info, http.StatusBadRequest)
 		}
 	default:
 		http.Error(w, "Only GET Method is supported", http.StatusBadRequest)
@@ -138,25 +137,19 @@ func (s *State) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 func (s *State) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	// Get URL segments after the StatusPath
 	segments := utils.GetSegments(r.URL, StatusPath)
-	// Calculate the uptime in seconds since the last service restart
-	uptime := utils.GetUptime()
 
 	switch r.Method {
 	case http.MethodGet:
 		switch len(segments) {
 		case 0:
-			// Get the status code of the countries API using the getStatusCode function
-			countriesStatusCode, _ := getStatusCode(api.API_BASE + api.API_VERSION + "/alpha/" + "nor")
-
 			// Create a struct to hold the API status information
 			httpRespondJSON(w, APIStatus{
-				Countriesapi:    countriesStatusCode,                       // HTTP status code for *REST Countries API*
-				Notification_db: s.firestoreMode.GetNotificationDBStatus(), // HTTP status code for *Notification DB* in Firebase
-				Webhooks:        s.getNumberOfRegistrations(),              // Number of registered webhooks
-				Version:         Version,                                   // API version
-				Uptime:          uptime,                                    // Uptime in seconds since the last service restart
+				Countriesapi:    s.countriesAPIMode.getRestCountriesStatus(), // HTTP status code for *REST Countries API*
+				Notification_db: s.firestoreMode.getNotificationDBStatus(),   // HTTP status code for *Notification DB* in Firebase
+				Webhooks:        s.getNumberOfRegistrations(),                // Number of registered webhooks
+				Version:         Version,                                     // API version
+				Uptime:          utils.GetUptime(),                           // Uptime in seconds since the last service restart
 			}, s)
-
 		default:
 			// Handle any other cases with URL segments
 			http.Error(w, "Usage: energy/v1/status/", http.StatusBadRequest)

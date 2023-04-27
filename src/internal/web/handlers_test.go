@@ -392,7 +392,8 @@ func TestStatusHandler(t *testing.T) {
 		// Test 1: Check if the APIStatus struct fields have expected values
 		HttpGetAndDecode(t, server.URL+StatusPath, &apiStatus)
 		if apiStatus.Countriesapi != http.StatusOK {
-			t.Errorf("Unexpected countries API status: got %v want %v", apiStatus.Countriesapi, http.StatusOK)
+			t.Errorf("Have you started the stub service for REST countries?"+
+				"Unexpected countries API status: got %v want %v", apiStatus.Countriesapi, http.StatusOK)
 		}
 		// Test 2: Testing whether a Bad Request error is returned when an unsupported HTTP method is used
 		statusCode1 := HttpPostStatusCode(t, server.URL+StatusPath, "")

@@ -65,7 +65,7 @@ type firestoreMode interface {
 	GetCacheFromFirebase(url *url.URL) (types.YearRecordList, error)
 	GetAllInvocationCounts() map[string]int64
 	GetAllInvocationRegistrations() map[string]types.InvocationRegistration
-	GetNotificationDBStatus() int
+	getNotificationDBStatus() int
 }
 
 // deleteRegistration removes a registration from the state's registrations map by its webhookID.
@@ -156,6 +156,7 @@ func (s *State) getCurrentRenewable(countryCode string, includeNeighbours bool) 
 // real 3rd party service
 type restCountriesMode interface {
 	getNeighboursCca(cca string) ([]string, error)
+	getRestCountriesStatus() int
 }
 
 // getNeighboursCca returns neighbouring list from stubbed country api
@@ -168,6 +169,14 @@ func (t StubRestCountries) getNeighboursCca(cca string) ([]string, error) {
 func (p UseRestCountries) getNeighboursCca(cca string) ([]string, error) {
 	val, err := api.GetNeighboursCca(cca, api.API_BASE)
 	return val, err
+}
+
+func (t StubRestCountries) getRestCountriesStatus() int {
+	return getStatusCode(api.STUB_BASE + api.API_VERSION + "/alpha/nor")
+}
+
+func (p UseRestCountries) getRestCountriesStatus() int {
+	return getStatusCode(api.API_BASE + api.API_VERSION + "/alpha/nor")
 }
 
 // GetCacheFromFirebase returns an error as caching is disabled in WithoutFirestore mode.
@@ -258,7 +267,7 @@ func (t WithoutFirestore) GetAllInvocationRegistrations() map[string]types.Invoc
 
 // GetNotificationDBStatus for WithFirestore type returns Notification DB status code.
 // It handles client creation errors and returns appropriate status codes.
-func (p WithFirestore) GetNotificationDBStatus() int {
+func (p WithFirestore) getNotificationDBStatus() int {
 	client, err := firebase_client.NewFirebaseClient()
 	defer client.Close()
 	if err != nil {
@@ -271,6 +280,6 @@ func (p WithFirestore) GetNotificationDBStatus() int {
 
 // GetNotificationDBStatus for WithoutFirestore type returns a
 // service unavailable status code, as Notification DB isn't used in this mode.
-func (t WithoutFirestore) GetNotificationDBStatus() int {
+func (t WithoutFirestore) getNotificationDBStatus() int {
 	return http.StatusServiceUnavailable
 }
