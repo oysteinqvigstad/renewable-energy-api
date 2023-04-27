@@ -56,9 +56,9 @@ These have all been implemented in our software.
 
 ## Additional requirements
 ---
--   All endpoints should be _tested using automated testing facilities provided by Golang_.
-    -   This includes the stubbing of the third-party endpoints to ensure test reliability (removing dependency on external services).
-    -   Include the testing of handlers using the httptest package. Your code should be structured to support this.
-    -   Try to maximize test coverage as reported by Golang.
--   Repeated invocations for a given country and date should be cached to minimise invocation on the third-party libraries. Use Firebase for this purpose.
-    -   **Advanced Task**: Implement purging of cached information for requests older than a given number of hours/days.
+-   All endpoints should be _tested using automated testing facilities provided by Golang_. ✅
+    -   This includes the stubbing of the third-party endpoints to ensure test reliability (removing dependency on external services). ✅ (created a countriesAPI stub service, firebase disabled during testing as that should not be stubbed)
+    -   Include the testing of handlers using the httptest package. Your code should be structured to support this. ✅
+    -   Try to maximize test coverage as reported by Golang. ✅ (80%+)
+-   Repeated invocations for a given country and date should be cached to minimise invocation on the third-party libraries. Use Firebase for this purpose. ✅
+    -   **Advanced Task**: Implement purging of cached information for requests older than a given number of hours/days. ✅ (gets purged after 7 days)
