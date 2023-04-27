@@ -35,8 +35,8 @@ See [milestones](https://git.gvk.idi.ntnu.no/course/prog2005/prog2005-2023-works
 
 ## Project Structure
     .
-    ├── compose.yaml								// Docker compose file
-    ├── progress.md									// Heuristic testing report
+    ├── compose.yaml                                // Docker compose file
+    ├── progress.md                                 // Heuristic testing report
     ├── README.md                                   // Provides project documentation and guidelines.
     ├── deploy                                      // Related to service deployment.
     │   ├── Dockerfile                              // Defines how to build a Docker image for the project.
