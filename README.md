@@ -1,39 +1,66 @@
-# Group 69 - Assignment 2
+# Countries Renewable Historic Information API
 
-[TOC]
+## Project Overview
 
-# Project overview
+A RESTful API service providing historical renewable energy share percentages by country, built with Golang. The service combines data from REST Countries API and a Renewable Energy Dataset to deliver historical trends with customizable date ranges, country comparisons, mean calculations, and comprehensive sorting capabilities for renewable energy statistics.
 
-Our team has been assigned the task of creating a REST web application using Golang. The primary objective of this application is to offer clients access to information on renewable energy production developments within and across countries. We will achieve this goal by utilizing an existing web service in combination with our own data-centric web service, which will involve creating endpoints to expose our service. Additionally, our application will allow clients to register notifications using webhooks. The application will be dockerized, and we will deploy it using an IaaS system.
+This project was developed as part of the Cloud Technologies (PROG2005) course at NTNU during the 2023 academic year. The team, consisting of Idar Løkset Mykløy, Aksel Matashev, and Øystein Qvigstad, successfully implemented the service and deployed it on NTNU's OpenStack instance. The project was focused on implementing proper RESTful semantics and HTTP response codes according to RFC 7231 specifications, ensuring standardized API behavior and communication patterns.
 
-To develop this project, we will be using the REST Countries API and the Renewable Energy Dataset. The Renewable Energy Dataset will provide the percentage of renewable energy in a country's energy mix over time, serving as the foundation for our service.
+### Key Features
+#### Data Access
+- Current renewable energy percentages by country
+- Historical renewable energy data with customizable date ranges
+- Neighboring countries' energy statistics
+- Mean value calculations across countries and time periods
+#### Notifications
+- Webhook registration system
+- Persistent webhook storage via Firebase
+- Configurable notification triggers based on API call frequency
 
-Our team has effectively developed the necessary services by minimizing the number of requests made to these services and utilizing the most appropriate endpoints provided by the APIs. During the development process, we have also stubbed the services for testing purposes, ensuring that we did not use the API services in our tests.
 
-We successfully deployed the final web service on our local OpenStack instance, SkyHigh. We initially developed the project on our local machines before moving to deployment. We are submitting both a URL to the deployed service and our code repository.
 
-Throughout this project, we familiarized ourselves with various technologies introduced as part of the course, ensuring a smooth development process. We actively participated in or reviewed the lectures to understand these technologies.
+### API Endpoints Overview
 
 
 
-## Project status
+#### Renewables Current
+```
+GET /energy/v1/renewables/current/{country?}
+Optional: ?neighbours=bool
+```
+#### Renewables History
+```
+GET /energy/v1/renewables/history/{country?}
+Optional: ?begin=year&end=year
+```
+#### Notifications
+```
+POST /energy/v1/notifications/
+GET /energy/v1/notifications/
+GET /energy/v1/notifications/{webhook_id}
+DELETE /energy/v1/notifications/{webhook_id}
+```
+#### Status
+```
+GET /energy/v1/status/
+```
 
-Currently in development
+Detailed examples of requests and responses can be found below
 
-## Roadmap
 
-See [milestones](https://git.gvk.idi.ntnu.no/course/prog2005/prog2005-2023-workspace/idarmy/project-group69/-/milestones/1#tab-issues)
-
-## Contributers
-
-* Idar Løkset Mykløy
-* Aksel Matashev
-* Øystein Qvigstad
 
 
 
 
 ## Project Structure
+
+#### Core Components
+- `/src/api`: API client implementations
+- `/src/cmd`: Main application and stub commands
+- `/src/internal`: Core business logic
+- `/src/res`: Resource files and data
+
+```
     .
     ├── compose.yaml                                // Docker compose file
     ├── progress.md                                 // Heuristic testing report
@@ -84,16 +111,26 @@ See [milestones](https://git.gvk.idi.ntnu.no/course/prog2005/prog2005-2023-works
         └── res                                     // Resource files containing data used in the project.
         	├── renewable-share-energy.csv          // CSV file with renewable share energy data.
         	└── rest_countries.json                 // JSON file for RESTful countries API.
+  ```
 
 
 
+## Deployment
+#### Prerequisites
+- Docker
+- Firebase account and credentials
+- Firebase secret key file (secret_key.json) placed in the project root directory
+#### Local Setup
+```
+# Start the service with Docker
+sudo docker compose up -d
+```
 
 
 
+# Endpoints (Detailed)
 
-# Endpoints
-
-Our web service will have four resource root paths:
+The service exposes four main endpoints through its REST API:
 
 - `/energy/v1/renewables/current`
 - `/energy/v1/renewables/history`
@@ -529,30 +566,3 @@ The response contains the following information:
 ```
 
 
-# Deployment
-
-The service is deployed on an IaaS solution OpenStack using Docker.
-
-**URL to the deployed service:** http://10.212.172.171:8080/energy/v1/
-
-The service can also be deployed locally using the provided docker compose file.
-For the local instance to work, a firebase secret key must be placed in the root folder of the project, and named `secret_key.json`.
-
-Once the secret is provided, the service can be run with this command:
-```sh
-sudo docker compose up -d
-```
-
-
-
-## Automated testing
-
-The project consists of unit and integration tests. To separate the tests from third-party services, ensure the stubbing service for the REST countries API is initiated on port 8081:
-
-> go run ./cmd/stub/stub_countries_api.go
-
-Once the stubbing service is active, initiate the automated tests using this command:
-
-> go test ./...
-
-By default, tests will be executed without the firebase update worker. To override this, modify the `testWithFirebase` boolean in `./internal/web/handlers_test.go`. However, this also requires the presence of an authentication key for the tests to pass.
